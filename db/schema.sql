@@ -8,7 +8,8 @@ CREATE TABLE Player (
     UserName VARCHAR(50) UNIQUE NOT NULL,
     PlayerLevel INT DEFAULT 1,
     ExperiencePoints INT DEFAULT 0,
-    WalletCredits INT DEFAULT 0
+    WalletCredits INT DEFAULT 0,
+    InventorySlots INT DEFAULT 0
 );
 
 --  Personnages créés par les joueurs
@@ -27,7 +28,7 @@ CREATE TABLE `Character` (
 CREATE TABLE Object (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     ObjectName VARCHAR(100),
-    Type ENUM('Armor', 'Artefacts', 'Potion', 'Weapons'),
+    Type ENUM('Arme', 'Artefact', 'Potion', 'Armure'),
     Strength INT,
     Defence INT,
     Effects VARCHAR(100),
