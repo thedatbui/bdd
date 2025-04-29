@@ -1,5 +1,6 @@
 import json
 import csv
+import xml.etree.ElementTree as ET
 import mysql.connector
 import re
 
@@ -20,6 +21,21 @@ def loadJSONfile(filePath):
     """
     with open(filePath, mode='r', encoding='utf-8') as jsonfile:
         return json.load(jsonfile)
+
+
+def loadXMLfile(filePath):
+    """
+    Load an XML file and return its contents as a dictionary.
+    """
+    tree = ET.parse(filePath)
+    root = tree.getroot()
+    data = {}
+    
+    for child in root:
+        data[child.tag] = child.text
+    
+    return data
+    
 
 def checkInteger(value):
     """
@@ -45,8 +61,8 @@ def connectToDatabase():
     try:
         connection = mysql.connector.connect(
             host='localhost',
-            user='dat', # Create ur own user
-            password='Alckart0246', # Create ur own password
+            user='hassan', # Create ur own user
+            password='777', # Create ur own password
             database='InventaireRPG', 
             auth_plugin='mysql_native_password',
             use_pure=True,
@@ -62,7 +78,7 @@ def loadPlayerData(cursor, playerFile):
      Load player data from a CSV file into the database.
      """
      for player in playerFile:
-        ID,userName,level,XP,Money,InventorySlot = (
+        ID,userName,level,XP,Money,InventorySlots = (
             player['ID'], player['NomUtilisateur'],
             player['Niveau'], player['XP'], player['Monnaie'], player['SlotsInventaire']
         )
@@ -71,7 +87,7 @@ def loadPlayerData(cursor, playerFile):
         level = level if checkInteger(level) else None
         XP = XP if checkInteger(XP) else None
         Money = Money if checkInteger(Money) else None
-        InventorySlot = InventorySlot if checkInteger(InventorySlot) else None
+        InventorySlots = InventorySlots if checkInteger(InventorySlots) else None
         ID = ID if checkInteger(ID) else None
 
     
@@ -80,11 +96,11 @@ def loadPlayerData(cursor, playerFile):
                     (player['ID'], player['NomUtilisateur']))
         
         if cursor.fetchone()[0] == 0 and level is not None and \
-        XP is not None and Money is not None and InventorySlot is not None:
+        XP is not None and Money is not None and InventorySlots is not None:
             # Only insert if player doesn't exist
-            cursor.execute("INSERT INTO Player (ID, UserName, PlayerLevel, ExperiencePoints, WalletCredits, InventorySlot) " \
+            cursor.execute("INSERT INTO Player (ID, UserName, PlayerLevel, ExperiencePoints, WalletCredits, InventorySlots) " \
             "VALUES (%s, %s, %s, %s, %s, %s)", (ID, userName, \
-            level, XP, Money, InventorySlot))
+            level, XP, Money, InventorySlots))
             print(f"Added player: {player['NomUtilisateur']}")
 
 def extract_property_value(property_str):
@@ -144,6 +160,67 @@ def loadObjectData(cursor, objectFile):
             "VALUES (%s, %s, %s, %s, %s, %s)", (name, type_, strength, Defence, effect, objectPrice))
             print(f"Added player: {object['Nom']}")
 
+def loadMonsterData(cursor, monsterFile):
+    """
+    Load monster data from an XML file into the database, including drops.
+    """
+    for monster in monsterFile['monstres']['monstre']:
+        monster_id = int(monster['id'])
+        name = monster['nom']
+        attack = int(monster['attaque'])
+        defense = int(monster['defense'])
+        life_points = int(monster['vie'])
+
+        # Check if the monster already exists
+        cursor.execute("SELECT COUNT(*) FROM Bestiary WHERE ID = %s", (monster_id,))
+        if cursor.fetchone()[0] == 0:
+            cursor.execute(
+                "INSERT INTO Bestiary (ID, BeastName, Attack, Defence, LifePoints) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (monster_id, name, attack, defense, life_points)
+            )
+            print(f"Added monster: {name}")
+
+        # Process drops
+        if 'drops' in monster:
+            for drop_name, drop_details in monster['drops'].items():
+                if isinstance(drop_details, dict):
+                    quantity = int(drop_details.get('nombre', 0))
+                    probability = int(drop_details.get('probabilité', 0))
+
+                    # Check if the drop already exists
+                    cursor.execute(
+                        "SELECT COUNT(*) FROM Rewards WHERE MonsterID = %s AND ObjectID = %s",
+                        (monster_id, drop_name)
+                    )
+                    if cursor.fetchone()[0] == 0:
+                        cursor.execute(
+                            "INSERT INTO Rewards (MonsterID, ObjectID, DropRate) "
+                            "VALUES (%s, %s, %s)",
+                            (monster_id, drop_name, probability)
+                        )
+                        print(f"Added drop: {drop_name} for monster {name}")
+
+def loadQuestData(cursor, questFile):
+    """
+    Load quest data from an XML file into the database.
+    """
+    for quest in questFile['quetes']['qu\u00eate']:
+        name = quest['Nom']
+        description = quest['Descripion']
+        difficulty = int(quest['Difficult\u00e9'])
+        experience = int(quest['Exp\u00e9rience'])
+        gold_reward = int(quest['R\u00e9compenses']['Or']) if 'Or' in quest['R\u00e9compenses'] else 0
+
+        # Check if the quest already exists
+        cursor.execute("SELECT COUNT(*) FROM Quest WHERE QuestName = %s", (name,))
+        if cursor.fetchone()[0] == 0:
+            cursor.execute(
+                "INSERT INTO Quest (QuestName, Description, DifficultyLevel, RewardXP, RewardGold) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (name, description, difficulty, experience, gold_reward)
+            )
+            print(f"Added quest: {name}")
 
 def main():
     """
@@ -157,7 +234,9 @@ def main():
     charactersFile = loadJSONfile('data/personnages.json')
     npcFile = loadJSONfile('data/pnjs.json')
 
-
+    # Load XML file
+    monsterFile = loadXMLfile('data/monstres.xml')
+    questFile = loadXMLfile('data/quetes.xml')
     # Connect to the database
     connection = connectToDatabase()
     if connection is None:
