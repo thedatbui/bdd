@@ -144,6 +144,78 @@ def loadObjectData(cursor, objectFile):
             "VALUES (%s, %s, %s, %s, %s, %s)", (name, type_, strength, Defence, effect, objectPrice))
             print(f"Added player: {object['Nom']}")
 
+def load_spell_data(cursor, spells):
+    """
+    Load spell data from a CSV file into the database.
+    """
+    for s in spells:
+        # Extraction brute des champs
+        ID, Name, manacost, cd, power = (
+            s['ID'],
+            s['Name'],
+            s['manacost'],
+            s['cd'],
+            s['power'],
+        )
+
+        # Validation des entiers
+        ID       = ID if checkInteger(ID)       else None
+        manacost = manacost if checkInteger(manacost) else None
+        cd       = cd if checkInteger(cd)       else None
+        power    = power if checkInteger(power) else None
+
+        # On saute si un champ manque ou si le nom est vide
+        if ID is None or manacost is None or cd is None or power is None or not Name:
+            continue
+
+        # Vérifier si le sort existe déjà
+        cursor.execute(
+            "SELECT COUNT(*) FROM Spell WHERE SpellID = %s",
+            (ID,)
+        )
+        if cursor.fetchone()[0] == 0:
+            # Insert unitaire
+            cursor.execute(
+                "INSERT INTO Spell (SpellID, Name, Power, ManaCost, Effect) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (ID, Name, power, manacost, cd)
+            )
+            print(f"Added spell: {Name}")
+
+
+def insert_player(cursor, player):
+    """
+    character: dict avec les clés
+      - CharacterID (int)  
+      - PlayerID    (int)
+      - ClassID     (int)
+      - Name        (str)
+      - Strength    (int)
+      - Agility     (int)
+      - Intelligence(int)
+      - HitPoints   (int)
+      - Mana        (int)
+    """
+    # Validation minimale
+    required = ('ID','Name','Level','XP','Money','SlotsInventaire')
+    if any(k not in player or player[k] is None for k in required):
+        raise ValueError("Données incomplètes pour le personnage : " + ", ".join(required))
+    
+    sql = """
+      INSERT INTO `Character`
+        (CharacterID, PlayerID, ClassID, Name, Strength, Agility, Intelligence, HitPoints, Mana)
+      VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+    params = (
+        int(player['ID']),
+        player['Name'].strip(),
+        int(player['Level']),
+        int(player['XP']),
+        int(player['Money']),
+        int(player['SlotsInventaire']),
+    )
+    cursor.execute(sql, params)
+
 
 def main():
     """
@@ -170,6 +242,9 @@ def main():
 
     # Load object data to the database
     loadObjectData(cursor, objectFile)
+
+    
+
        
         
     # Fermer la connexion
