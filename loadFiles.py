@@ -43,7 +43,6 @@ def checkInteger(value):
     """
     try:
         int(value)
-       
         if int(value) > 0:
             return True
         else:
@@ -61,8 +60,8 @@ def connectToDatabase():
     try:
         connection = mysql.connector.connect(
             host='localhost',
-            user='hassan', # Create ur own user
-            password='777', # Create ur own password
+            user='dat', # Create ur own user
+            password='Alckart0246', # Create ur own password
             database='InventaireRPG', 
             auth_plugin='mysql_native_password',
             use_pure=True,
@@ -72,6 +71,8 @@ def connectToDatabase():
     except mysql.connector.Error as err:
         print(f"Error: {err}")
         return None
+
+
 
 def loadPlayerData(cursor, playerFile):
      """
@@ -214,6 +215,7 @@ def loadQuestData(cursor, questFile):
 
         # Check if the quest already exists
         cursor.execute("SELECT COUNT(*) FROM Quest WHERE QuestName = %s", (name,))
+
         if cursor.fetchone()[0] == 0:
             cursor.execute(
                 "INSERT INTO Quest (QuestName, Description, DifficultyLevel, RewardXP, RewardGold) "
@@ -227,16 +229,18 @@ def main():
     Main function to load data from CSV and JSON files into the database.
     """
     # Load CSV file
-    playerFile = loadCSVfile('data/joueurs.csv')
-    objectFile = loadCSVfile('data/objets.csv')
-    spellsFile = loadCSVfile('data/sorts.csv')
+    playerFile = loadCSVfile('bdd/data/joueurs.csv')
+    objectFile = loadCSVfile('bdd/data/objets.csv')
+    spellsFile = loadCSVfile('bdd/data/sorts.csv')
+
     # Load JSON file
-    charactersFile = loadJSONfile('data/personnages.json')
-    npcFile = loadJSONfile('data/pnjs.json')
+    charactersFile = loadJSONfile('bdd/data/personnages.json')
+    npcFile = loadJSONfile('bdd/data/pnjs.json')
 
     # Load XML file
-    monsterFile = loadXMLfile('data/monstres.xml')
-    questFile = loadXMLfile('data/quetes.xml')
+    monsterFile = loadXMLfile('bdd/data/monstres.xml')
+    questFile = loadXMLfile('bdd/data/quetes.xml')
+
     # Connect to the database
     connection = connectToDatabase()
     if connection is None:
