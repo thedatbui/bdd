@@ -72,8 +72,8 @@ class MainWindow(QMainWindow):
         self.titleLabel.setFont(QtGui.QFont("Arial", 20))
 
         self.inputLayout = setupLineEdit(self.mainLayout, "Enter your userName: ", "Enter your character name: ")
-        self.inputField_1 = self.inputLayout.itemAt(1).widget()
-        self.inputField_2 = self.inputLayout.itemAt(3).widget()
+        self.inputField_1 = self.inputLayout[0]
+        self.inputField_2 = self.inputLayout[1]
 
         self.classLayout = QHBoxLayout()
         self.classeCombobox = QtWidgets.QComboBox()
@@ -180,7 +180,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     # Load CSV file
-    main()
+    # main()
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()

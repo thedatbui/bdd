@@ -14,14 +14,12 @@ def loadCSVfile(filePath):
         reader = csv.DictReader(csvfile)
         return [row for row in reader]
 
-
 def loadJSONfile(filePath):
     """
     Load a JSON file and return its contents as a dictionary.
     """
     with open(filePath, mode='r', encoding='utf-8') as jsonfile:
         return json.load(jsonfile)
-
 
 def loadXMLfile(filePath):
     """
@@ -36,7 +34,6 @@ def loadXMLfile(filePath):
     
     return data
     
-
 def checkInteger(value):
     """
     Check if the value is a valid integer.
@@ -52,7 +49,6 @@ def checkInteger(value):
     except TypeError:
         return False
    
-
 def connectToDatabase():
     """
     Connect to the MySQL database and return the connection object.
@@ -72,8 +68,24 @@ def connectToDatabase():
         print(f"Error: {err}")
         return None
 
-
-
+def extract_property_value(property_str):
+    """
+    Extract numeric value from a property string like 'Puissance d'attaque: 15'.
+    Returns None if no number is found.
+    """
+    property = property_str.split(':')
+    if len(property) > 1:
+        if property[0] == 'Effet':
+            # Extract the effect string
+            return property[1].strip()
+        elif property[0] == 'Puissance d\'attaque' or property[0] == 'Défense':
+            return int(property[1].strip())
+        else:  
+            # Handle other properties if needed
+            return property_str
+    else:
+        return property[0].strip()
+        
 def loadPlayerData(cursor, playerFile):
      """
      Load player data from a CSV file into the database.
@@ -99,29 +111,10 @@ def loadPlayerData(cursor, playerFile):
         if cursor.fetchone()[0] == 0 and level is not None and \
         XP is not None and Money is not None and InventorySlots is not None:
             # Only insert if player doesn't exist
-            cursor.execute("INSERT INTO Player (ID, UserName, PlayerLevel, ExperiencePoints, WalletCredits, InventorySlots) " \
+            cursor.execute("INSERT INTO Player (ID, UserName, PlayerLevel, ExperiencePoints, WalletCredits, InventorySlot) " \
             "VALUES (%s, %s, %s, %s, %s, %s)", (ID, userName, \
             level, XP, Money, InventorySlots))
             print(f"Added player: {player['NomUtilisateur']}")
-
-def extract_property_value(property_str):
-    """
-    Extract numeric value from a property string like 'Puissance d'attaque: 15'.
-    Returns None if no number is found.
-    """
-    property = property_str.split(':')
-    if len(property) > 1:
-        if property[0] == 'Effet':
-            # Extract the effect string
-            return property[1].strip()
-        elif property[0] == 'Puissance d\'attaque' or property[0] == 'Défense':
-            return int(property[1].strip())
-        else:  
-            # Handle other properties if needed
-            return property_str
-    else:
-        return property[0].strip()
-        
 
 def loadObjectData(cursor, objectFile):
     """
@@ -141,6 +134,10 @@ def loadObjectData(cursor, objectFile):
         # Extract properties
         if type_ == 'Arme' and type_ is not None:
             strength = extract_property_value(properties)
+            if isinstance(strength, str):
+                # If the property is a string, we can assume it's an effect
+                effect = strength
+                strength = 0
         elif type_ == 'Armure' and type_ is not None:
             Defence = extract_property_value(properties)
             if isinstance(Defence, str):
@@ -223,7 +220,7 @@ def loadQuestData(cursor, questFile):
                 (name, description, difficulty, experience, gold_reward)
             )
             print(f"Added quest: {name}")
-            
+
 def load_spell_data(cursor, spells):
     """
     Load spell data from a CSV file into the database.
@@ -261,7 +258,6 @@ def load_spell_data(cursor, spells):
                 (ID, Name, power, manacost, cd)
             )
             print(f"Added spell: {Name}")
-
 
 def insert_player(cursor, player):
     """
@@ -303,11 +299,11 @@ def main():
     # Load CSV file
     playerFile = loadCSVfile('bdd/data/joueurs.csv')
     objectFile = loadCSVfile('bdd/data/objets.csv')
-    spellsFile = loadCSVfile('bdd/data/sorts.csv')
+    # spellsFile = loadCSVfile('bdd/data/sorts.csv')
 
-    # Load JSON file
-    charactersFile = loadJSONfile('bdd/data/personnages.json')
-    npcFile = loadJSONfile('bdd/data/pnjs.json')
+    # # Load JSON file
+    # charactersFile = loadJSONfile('bdd/data/personnages.json')
+    # npcFile = loadJSONfile('bdd/data/pnjs.json')
 
     # Load XML file
     monsterFile = loadXMLfile('bdd/data/monstres.xml')
@@ -325,7 +321,9 @@ def main():
 
     # Load object data to the database
     loadObjectData(cursor, objectFile)
-       
+    
+    loadMonsterData(cursor, monsterFile)
+    loadQuestData(cursor, questFile)
         
     # Fermer la connexion
     cursor.close()
