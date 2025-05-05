@@ -25,9 +25,9 @@ CREATE TABLE `Character` (
 );
 
 -- Objets
-CREATE TABLE Object (
+CREATE TABLE ObjectTest (
     ID INT AUTO_INCREMENT PRIMARY KEY,
-    ObjectName VARCHAR(100),
+    ObjectName VARCHAR(100) UNIQUE,
     Type ENUM('Arme', 'Artefact', 'Potion', 'Armure'),
     Strength INT,
     Defence INT,
@@ -38,11 +38,11 @@ CREATE TABLE Object (
 --  Inventaire des joueurs
 CREATE TABLE Inventory (
     PlayerID INT,
-    ObjectID INT,
+    ObjectName VARCHAR(100),
     MaxCapacity INT DEFAULT 1,
-    PRIMARY KEY (PlayerID, ObjectID),
+    PRIMARY KEY (PlayerID, ObjectName),
     FOREIGN KEY (PlayerID) REFERENCES Player(ID),
-    FOREIGN KEY (ObjectID) REFERENCES Object(ID)
+    FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName)
 );
 
 --  PNJ
@@ -65,10 +65,11 @@ CREATE TABLE Quest (
 --  Objets récompensés par des quêtes
 CREATE TABLE Quest_Objects (
     QuestID INT,
-    ObjectID INT,
-    PRIMARY KEY (QuestID, ObjectID),
+    ObjectName VARCHAR(100),
+    Gold INT,
+    PRIMARY KEY (QuestID, ObjectName),
     FOREIGN KEY (QuestID) REFERENCES Quest(ID),
-    FOREIGN KEY (ObjectID) REFERENCES Object(ID)
+    FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName)
 );
 
 --  Monstres
@@ -84,9 +85,11 @@ CREATE TABLE Bestiary (
 --  Récompenses obtenues sur les monstres
 CREATE TABLE Rewards (
     MonsterID INT,
-    ObjectID INT,
+    ObjectName VARCHAR(100) NULL, -- Permettre NULL
     DropRate INT,
-    PRIMARY KEY (MonsterID, ObjectID),
+    Quantity INT,
+    Gold VARCHAR(50),
+    PRIMARY KEY (MonsterID), -- Retirer ObjectName de la clé primaire
+    UNIQUE (MonsterID, ObjectName), -- Ajouter une contrainte UNIQUE
     FOREIGN KEY (MonsterID) REFERENCES Bestiary(ID),
-    FOREIGN KEY (ObjectID) REFERENCES Object(ID)
-);
+    FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName));
