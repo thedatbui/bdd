@@ -28,7 +28,7 @@ CREATE TABLE `Character` (
 CREATE TABLE ObjectTest (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     ObjectName VARCHAR(100) UNIQUE,
-    Type ENUM('Arme', 'Artefact', 'Potion', 'Armure'),
+    Type ENUM('Arme', 'Artefact', 'Potion', 'Armure', 'Potions', 'Sword'),
     Strength INT,
     Defence INT,
     Effects VARCHAR(100),
@@ -84,12 +84,12 @@ CREATE TABLE Bestiary (
 
 --  Récompenses obtenues sur les monstres
 CREATE TABLE Rewards (
-    MonsterID INT,
-    ObjectName VARCHAR(100) NULL, -- Permettre NULL
+    MonsterID INT NOT NULL,
+    ObjectName VARCHAR(100) NOT NULL, 
     DropRate INT,
     Quantity INT,
     Gold VARCHAR(50),
-    PRIMARY KEY (MonsterID), -- Retirer ObjectName de la clé primaire
-    UNIQUE (MonsterID, ObjectName), -- Ajouter une contrainte UNIQUE
+    PRIMARY KEY (MonsterID, ObjectName),
     FOREIGN KEY (MonsterID) REFERENCES Bestiary(ID),
-    FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName));
+    FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName)
+);
