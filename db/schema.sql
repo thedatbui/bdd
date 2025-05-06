@@ -17,10 +17,12 @@ CREATE TABLE `Character` (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     PlayerID INT,
     CharacterName VARCHAR(50),
-    Class ENUM('Warrior', 'Wizard', 'Rogue'),
+    Class ENUM("Assassin", "Archer", "Barbare", "Berserker", "Chasseur","Chevalier", "Démoniste", "Druide", "Enchanteresse", "Guerrier","Illusionniste", "Mage", "Moine", "Nécromancien", "Paladin","Prêtresse", "Rôdeur", "Sorcière", "Templier"),
     Strength INT,
     Agility INT,
     Intelligence INT,
+    pv INT,
+    mana INT,
     FOREIGN KEY (PlayerID) REFERENCES Player(ID)
 );
 
