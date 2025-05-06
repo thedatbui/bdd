@@ -6,4 +6,5 @@ def get_connection():
         user="root",
         password="TON_MDP",  # à adapter
         database="InventaireRPG"
+        ssl_disabled=True
     )

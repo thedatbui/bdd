@@ -116,6 +116,61 @@ def loadPlayerData(cursor, playerFile):
             level, XP, Money, InventorySlots))
             print(f"Added player: {player['NomUtilisateur']}")
 
+def loadCharacterData(cursor, characters):
+    """
+    Load characters from JSON into the Character table.
+    """
+    classes_valides = [
+        "Assassin", "Archer", "Barbare", "Berserker", "Chasseur",
+        "Chevalier", "Démoniste", "Druide", "Enchanteresse", "Guerrier",
+        "Illusionniste", "Mage", "Moine", "Nécromancien", "Paladin",
+        "Prêtresse", "Rôdeur", "Sorcière", "Templier"
+    ]
+
+    corrections = {
+        "R\u00f4deur": "Rôdeur",
+        "D\u00e9moniste": "Démoniste",
+        "Sorci\u00e8re": "Sorcière", 
+        "N\u00e9cromancien" : "Nécromancien",  
+        "Pr\u00eatresse" : "Prêtresse"
+    }
+
+    for c in characters:
+        username = c["utilisateur"]
+
+        # Chercher l’ID du joueur
+        cursor.execute("SELECT ID FROM Player WHERE UserName = %s", (username,))
+        result = cursor.fetchone()
+        if not result:
+            print(f"Utilisateur '{username}' non trouvé → personnage ignoré")
+            continue
+        player_id = result[0]
+
+        char_name = c["Nom"]
+        classe = c["Classe"].capitalize()
+
+        # Correction si besoin
+        classe = corrections.get(classe, classe)
+
+        if classe not in classes_valides:
+            print(f"Classe '{classe}' non valide pour {char_name} → ignoré")
+            continue
+
+        # Stats
+        force = c["Force"]
+        agi = c["Agilite"]
+        intel = c["Intelligence"]
+        hp = c["Vie"]
+        mana = c["Mana"]
+
+        # Insertion dans la table
+        cursor.execute("""
+            INSERT INTO `Character` (PlayerID, CharacterName, Class, Strength, Agility, Intelligence, pv, mana)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (player_id, char_name, classe, force, agi, intel, hp, mana))
+
+        print(f"Ajouté : {char_name} → joueur {username}")
+
 def loadObjectData(cursor, objectFile):
     """
     Load object data from a CSV file into the database.
@@ -297,17 +352,17 @@ def main():
     Main function to load data from CSV and JSON files into the database.
     """
     # Load CSV file
-    playerFile = loadCSVfile('bdd/data/joueurs.csv')
-    objectFile = loadCSVfile('bdd/data/objets.csv')
+    playerFile = loadCSVfile('data/joueurs.csv')
+    objectFile = loadCSVfile('data/objets.csv')
     # spellsFile = loadCSVfile('bdd/data/sorts.csv')
 
     # # Load JSON file
-    # charactersFile = loadJSONfile('bdd/data/personnages.json')
+    characters = loadJSONfile("data/personnages.json")["personnages"]
     # npcFile = loadJSONfile('bdd/data/pnjs.json')
 
     # Load XML file
-    monsterFile = loadXMLfile('bdd/data/monstres.xml')
-    questFile = loadXMLfile('bdd/data/quetes.xml')
+    monsterFile = loadXMLfile('data/monstres.xml')
+    questFile = loadXMLfile('data/quetes.xml')
 
     # Connect to the database
     connection = connectToDatabase()
@@ -319,6 +374,9 @@ def main():
     # Load player data to the database
     loadPlayerData(cursor, playerFile)
 
+    # Load Characters related to players
+    loadCharacterData(cursor, characters)
+    
     # Load object data to the database
     loadObjectData(cursor, objectFile)
     
