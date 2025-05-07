@@ -33,11 +33,11 @@ CREATE TABLE `Character` (
 CREATE TABLE ObjectTest (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     ObjectName VARCHAR(100) UNIQUE,
-    Type ENUM('Arme', 'Artefact', 'Potion', 'Armure', 'Potions', 'Sword'),
-    Strength INT,
-    Defence INT,
-    Effects VARCHAR(100),
-    Price INT
+    Type ENUM('Arme', 'Artefact', 'Potion', 'Armure', 'Potions', 'Sword') DEFAULT Null,
+    Strength INT DEFAULT 0,
+    Defence INT DEFAULT 0,
+    Effects VARCHAR(100) DEFAULT Null,
+    Price INT DEFAULT 0
 );
 
 --  Inventaire des joueurs
@@ -90,10 +90,9 @@ CREATE TABLE Bestiary (
 --  Récompenses obtenues sur les monstres
 CREATE TABLE Rewards (
     MonsterID INT NOT NULL,
-    ObjectName VARCHAR(100) NOT NULL, 
+    ObjectName VARCHAR(100), 
     DropRate INT,
     Quantity INT,
-    Gold VARCHAR(50),
     PRIMARY KEY (MonsterID, ObjectName),
     FOREIGN KEY (MonsterID) REFERENCES Bestiary(ID),
     FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName)
