@@ -393,67 +393,71 @@ def loadCharacterData(cursor, characters):
         "Assassin", "Archer", "Barbare", "Berserker", "Chasseur",
         "Chevalier", "Démoniste", "Druide", "Enchanteresse", "Guerrier",
         "Illusionniste", "Mage", "Moine", "Nécromancien", "Paladin",
-        "Prêtresse", "Rôdeur", "Sorcière", "Templier"
+        "Prêtresse", "Rôdeur", "Sorcière", "Templier", "Voleur"
     ]
 
     corrections = {
         "R\u00f4deur": "Rôdeur",
         "D\u00e9moniste": "Démoniste",
         "Sorci\u00e8re": "Sorcière", 
-        "N\u00e9cromancien" : "Nécromancien",  
-        "Pr\u00eatresse" : "Prêtresse"
+        "N\u00e9cromancien": "Nécromancien",  
+        "Pr\u00eatresse": "Prêtresse",
+        "Rodeur": "Rôdeur",  # En cas de faute sans accent
+        "Pretresse": "Prêtresse",
+        "Necromancien": "Nécromancien"
     }
 
     for c in characters:
-        username = c["utilisateur"]
+        username = c.get("utilisateur")
+        char_name = c.get("Nom")
+        raw_class = c.get("Classe", "").strip()
 
-        # Chercher l’ID du joueur
+        # Correction d'encodage et orthographe
+        classe = corrections.get(raw_class, raw_class)
+
+        # Vérification de la validité de la classe
+        if classe not in classes_valides:
+            print(f"❌ Classe '{classe}' non valide pour {char_name} → ignoré")
+            continue
+
+        # Récupération du joueur
         cursor.execute("SELECT ID FROM Player WHERE UserName = %s", (username,))
         result = cursor.fetchone()
         if not result:
-            print(f"Utilisateur '{username}' non trouvé → personnage ignoré")
+            print(f"❌ Utilisateur '{username}' non trouvé → personnage ignoré")
             continue
         player_id = result[0]
 
-        char_name = c["Nom"]
-        classe = c["Classe"].capitalize()
-
-        # Correction si besoin
-        classe = corrections.get(classe, classe)
-
-        if classe not in classes_valides:
-            print(f"Classe '{classe}' non valide pour {char_name} → ignoré")
-            continue
-
         # Stats
-        force = c["Force"]
-        agi = c["Agilite"]
-        intel = c["Intelligence"]
-        hp = c["Vie"]
-        mana = c["Mana"]
+        force = c.get("Force", 0)
+        agi = c.get("Agilite", 0)
+        intel = c.get("Intelligence", 0)
+        hp = c.get("Vie", 0)
+        mana = c.get("Mana", 0)
 
-        # Insertion dans la table
-        cursor.execute("""
-            INSERT INTO `Character` (PlayerID, CharacterName, Class, Strength, Agility, Intelligence, pv, mana)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """, (player_id, char_name, classe, force, agi, intel, hp, mana))
-
-        print(f"Ajouté : {char_name} → joueur {username}")
-
+        # Insertion
+        try:
+            cursor.execute("""
+                INSERT INTO `Character` (PlayerID, CharacterName, Class, Strength, Agility, Intelligence, pv, mana)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (player_id, char_name, classe, force, agi, intel, hp, mana))
+            print(f"✅ Ajouté : {char_name} ({classe}) → joueur {username}")
+        except Exception as e:
+            print(f"⚠️ Erreur à l'insertion de '{char_name}' : {e}")
 
 def main():
     """
     Main function to load data from CSV and JSON files into the database.
     """
     # Load CSV file
-    # playerFile = loadCSVfile('bdd/data/joueurs.csv')
+    playerFile = loadCSVfile('data/joueurs.csv')
     objectFile = loadCSVfile('data/objets.csv')
-    # spellsFile = loadCSVfile('bdd/data/sorts.csv')
+    # spellsFile = loadCSVfile('data/sorts.csv')
 
     # # Load JSON file
     charactersFile = loadJSONfile('data/personnages.json')
     characters = charactersFile["personnages"]
-    # npcFile = loadJSONfile('bdd/data/pnjs.json')
+    # npcFile = loadJSONfile('data/pnjs.json')
 
     # Load XML file
     monsterFile = loadXMLfile('data/monstres.xml')
@@ -467,7 +471,7 @@ def main():
     cursor = connection.cursor()
 
     # Load player data to the database
-    # loadPlayerData(cursor, playerFile)
+    loadPlayerData(cursor, playerFile)
 
     # # Load object data to the database
     loadObjectData(cursor, objectFile)

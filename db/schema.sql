@@ -9,7 +9,7 @@ CREATE TABLE Player (
     PlayerLevel INT DEFAULT 1,
     ExperiencePoints INT DEFAULT 0,
     WalletCredits INT DEFAULT 0,
-    InventorySlots INT DEFAULT 0
+    InventorySlot INT DEFAULT 0
 );
 
 --  Personnages créés par les joueurs
@@ -17,7 +17,10 @@ CREATE TABLE `Character` (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     PlayerID INT,
     CharacterName VARCHAR(50),
-    Class ENUM("Assassin", "Archer", "Barbare", "Berserker", "Chasseur","Chevalier", "Démoniste", "Druide", "Enchanteresse", "Guerrier","Illusionniste", "Mage", "Moine", "Nécromancien", "Paladin","Prêtresse", "Rôdeur", "Sorcière", "Templier"),
+    Class ENUM("Assassin", "Archer", "Barbare", "Berserker", "Chasseur",
+               "Chevalier", "Démoniste", "Druide", "Enchanteresse", "Guerrier",
+               "Illusionniste", "Mage", "Moine", "Nécromancien", "Paladin",
+               "Prêtresse", "Rôdeur", "Sorcière", "Templier"),
     Strength INT,
     Agility INT,
     Intelligence INT,
