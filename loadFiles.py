@@ -53,8 +53,6 @@ def connectToDatabase():
     try:
         connection = mysql.connector.connect(
             host='localhost',
-            user='hassan', # Create ur own user
-            password='777', # Create ur own password
             database='InventaireRPG', 
             auth_plugin='mysql_native_password',
             use_pure=True,
@@ -458,7 +456,7 @@ def main():
     Main function to load data from CSV and JSON files into the database.
     """
     # Load CSV file
-    # playerFile = loadCSVfile('bdd/data/joueurs.csv')
+    playerFile = loadCSVfile('data/joueurs.csv')
     objectFile = loadCSVfile('data/objets.csv')
     # spellsFile = loadCSVfile('bdd/data/sorts.csv')
 
