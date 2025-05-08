@@ -26,13 +26,8 @@ def loadXMLfile(filePath):
     Load an XML file and return its root element.
     """
     tree = ET.parse(filePath)
-    root = tree.getroot()
-    data = {}
-    
-    for child in root:
-        data[child.tag] = child.text
-    
-    return data
+    return tree.getroot()
+
     
 def checkInteger(value):
     """
@@ -48,6 +43,8 @@ def checkInteger(value):
         return False
     except TypeError:
         return False
+    except AttributeError:
+        return False
    
 def connectToDatabase():
     """
@@ -56,8 +53,8 @@ def connectToDatabase():
     try:
         connection = mysql.connector.connect(
             host='localhost',
-            user='dat', # Create ur own user
-            password='Alckart0246', # Create ur own password
+            user='dat',
+            password='Alckart0246',
             database='InventaireRPG', 
             auth_plugin='mysql_native_password',
             use_pure=True,
@@ -67,25 +64,6 @@ def connectToDatabase():
     except mysql.connector.Error as err:
         print(f"Error: {err}")
         return None
-
-def extract_property_value(property_str):
-    """
-    Extract numeric value from a property string like 'Puissance d'attaque: 15'.
-    Returns None if no number is found.
-    """
-    property = property_str.split(':')
-    if len(property) > 1:
-        if property[0] == 'Effet':
-            # Extract the effect string
-            return property[1].strip()
-        elif property[0] == 'Puissance d\'attaque' or property[0] == 'Défense':
-            return int(property[1].strip())
-        else:  
-            # Handle other properties if needed
-            return property_str
-    else:
-        return property[0].strip()
-        
 
 def extract_property_value(property_str):
     """
@@ -135,61 +113,6 @@ def loadPlayerData(cursor, playerFile):
             level, XP, Money, InventorySlots))
             print(f"Added player: {player['NomUtilisateur']}")
 
-def loadCharacterData(cursor, characters):
-    """
-    Load characters from JSON into the Character table.
-    """
-    classes_valides = [
-        "Assassin", "Archer", "Barbare", "Berserker", "Chasseur",
-        "Chevalier", "Démoniste", "Druide", "Enchanteresse", "Guerrier",
-        "Illusionniste", "Mage", "Moine", "Nécromancien", "Paladin",
-        "Prêtresse", "Rôdeur", "Sorcière", "Templier"
-    ]
-
-    corrections = {
-        "R\u00f4deur": "Rôdeur",
-        "D\u00e9moniste": "Démoniste",
-        "Sorci\u00e8re": "Sorcière", 
-        "N\u00e9cromancien" : "Nécromancien",  
-        "Pr\u00eatresse" : "Prêtresse"
-    }
-
-    for c in characters:
-        username = c["utilisateur"]
-
-        # Chercher l’ID du joueur
-        cursor.execute("SELECT ID FROM Player WHERE UserName = %s", (username,))
-        result = cursor.fetchone()
-        if not result:
-            print(f"Utilisateur '{username}' non trouvé → personnage ignoré")
-            continue
-        player_id = result[0]
-
-        char_name = c["Nom"]
-        classe = c["Classe"].capitalize()
-
-        # Correction si besoin
-        classe = corrections.get(classe, classe)
-
-        if classe not in classes_valides:
-            print(f"Classe '{classe}' non valide pour {char_name} → ignoré")
-            continue
-
-        # Stats
-        force = c["Force"]
-        agi = c["Agilite"]
-        intel = c["Intelligence"]
-        hp = c["Vie"]
-        mana = c["Mana"]
-
-        # Insertion dans la table
-        cursor.execute("""
-            INSERT INTO `Character` (PlayerID, CharacterName, Class, Strength, Agility, Intelligence, pv, mana)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """, (player_id, char_name, classe, force, agi, intel, hp, mana))
-
-        print(f"Ajouté : {char_name} → joueur {username}")
-
 def loadObjectData(cursor, objectFile):
     """
     Load object data from a CSV file into the database.
@@ -217,10 +140,6 @@ def loadObjectData(cursor, objectFile):
         # Extract properties
         if type_ == 'Arme' and type_ is not None:
             strength = extract_property_value(properties)
-            if isinstance(strength, str):
-                # If the property is a string, we can assume it's an effect
-                effect = strength
-                strength = 0
             if isinstance(strength, str):
                 # If the property is a string, we can assume it's an effect
                 effect = strength
@@ -380,23 +299,27 @@ def loadQuestData(cursor, root):
     """
     Load quest data from an XML file into the database.
     """
-    for quest in questFile['quetes']['qu\u00eate']:
-        name = quest['Nom']
-        description = quest['Descripion']
-        difficulty = int(quest['Difficult\u00e9'])
-        experience = int(quest['Exp\u00e9rience'])
-        gold_reward = int(quest['R\u00e9compenses']['Or']) if 'Or' in quest['R\u00e9compenses'] else 0
-
-        # Check if the quest already exists
-        cursor.execute("SELECT COUNT(*) FROM Quest WHERE QuestName = %s", (name,))
-
+    for quest in root.findall('quête'):
+        quest_description = quest.find('Descripion').text
+        quest_difficulty_level = int(quest.find('Difficulté').text)
+        quest_name = quest.find('Nom').text
+        quest_xp = int(quest.find('Expérience').text)
+        
+        # Insert quest data into the Quest table
+        cursor.execute(
+            "SELECT COUNT(*) FROM Quest WHERE Name = %s",
+            (quest_name,)
+        )
         if cursor.fetchone()[0] == 0:
             cursor.execute(
-                "INSERT INTO Quest (QuestName, Description, DifficultyLevel, RewardXP, RewardGold) "
-                "VALUES (%s, %s, %s, %s, %s)",
-                (name, description, difficulty, experience, gold_reward)
+                "INSERT INTO Quest (QuestName, Description, DifficultyLevel, RewardXP, ) "
+                "VALUES (%s, %s, %s, %s)",
+                (quest_name, quest_description, quest_difficulty_level, quest_xp)
             )
-            print(f"Added quest: {name}")
+            print(f"Added quest: {quest_name}")
+            
+        
+        
 
 def load_spell_data(cursor, spells):
     """
@@ -469,6 +392,67 @@ def insert_player(cursor, player):
     )
     cursor.execute(sql, params)
 
+
+def loadCharacterData(cursor, characters):
+    """
+    Load characters from JSON into the Character table.
+    """
+    classes_valides = [
+        "Assassin", "Archer", "Barbare", "Berserker", "Chasseur",
+        "Chevalier", "Démoniste", "Druide", "Enchanteresse", "Guerrier",
+        "Illusionniste", "Mage", "Moine", "Nécromancien", "Paladin",
+        "Prêtresse", "Rôdeur", "Sorcière", "Templier", "Voleur"
+    ]
+
+    corrections = {
+        "R\u00f4deur": "Rôdeur",
+        "D\u00e9moniste": "Démoniste",
+        "Sorci\u00e8re": "Sorcière", 
+        "N\u00e9cromancien": "Nécromancien",  
+        "Pr\u00eatresse": "Prêtresse",
+        "Rodeur": "Rôdeur",  # En cas de faute sans accent
+        "Pretresse": "Prêtresse",
+        "Necromancien": "Nécromancien"
+    }
+
+    for c in characters:
+        username = c.get("utilisateur")
+        char_name = c.get("Nom")
+        raw_class = c.get("Classe", "").strip()
+
+        # Correction d'encodage et orthographe
+        classe = corrections.get(raw_class, raw_class)
+
+        # Vérification de la validité de la classe
+        if classe not in classes_valides:
+            print(f"❌ Classe '{classe}' non valide pour {char_name} → ignoré")
+            continue
+
+        # Récupération du joueur
+        cursor.execute("SELECT ID FROM Player WHERE UserName = %s", (username,))
+        result = cursor.fetchone()
+        if not result:
+            print(f"❌ Utilisateur '{username}' non trouvé → personnage ignoré")
+            continue
+        player_id = result[0]
+
+        # Stats
+        force = c.get("Force", 0)
+        agi = c.get("Agilite", 0)
+        intel = c.get("Intelligence", 0)
+        hp = c.get("Vie", 0)
+        mana = c.get("Mana", 0)
+
+        # Insertion
+        try:
+            cursor.execute("""
+                INSERT INTO `Character` (PlayerID, CharacterName, Class, Strength, Agility, Intelligence, pv, mana)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (player_id, char_name, classe, force, agi, intel, hp, mana))
+            print(f"✅ Ajouté : {char_name} ({classe}) → joueur {username}")
+        except Exception as e:
+            print(f"⚠️ Erreur à l'insertion de '{char_name}' : {e}")
+
 def main():
     """
     Main function to load data from CSV and JSON files into the database.
@@ -479,12 +463,14 @@ def main():
     # spellsFile = loadCSVfile('bdd/data/sorts.csv')
 
     # # Load JSON file
-    characters = loadJSONfile("data/personnages.json")["personnages"]
-    # npcFile = loadJSONfile('bdd/data/pnjs.json')
+    charactersFile = loadJSONfile('data/personnages.json')
+    characters = charactersFile["personnages"]
+    # npcFile = loadJSONfile('data/pnjs.json')
 
     # Load XML file
     monsterFile = loadXMLfile('data/monstres.xml')
-    questFile = loadXMLfile('data/quetes.xml')
+    monsterFile = loadXMLfile('data/monstres.xml')
+    # questFile = loadXMLfile('data/quetes.xml')
 
     # Connect to the database
     connection = connectToDatabase()
@@ -496,14 +482,15 @@ def main():
     # Load player data to the database
     loadPlayerData(cursor, playerFile)
 
-    # Load Characters related to players
-    loadCharacterData(cursor, characters)
-    
-    # Load object data to the database
+    # # Load object data to the database
     loadObjectData(cursor, objectFile)
     
     loadMonsterData(cursor, monsterFile)
-    loadQuestData(cursor, questFile)
+
+    # Load Characters related to players
+    loadCharacterData(cursor, characters)
+
+    #loadQuestData(cursor, questFile)
         
     # Fermer la connexion
     cursor.close()
