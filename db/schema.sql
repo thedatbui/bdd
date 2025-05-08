@@ -9,7 +9,7 @@ CREATE TABLE Player (
     PlayerLevel INT DEFAULT 1,
     ExperiencePoints INT DEFAULT 0,
     WalletCredits INT DEFAULT 0,
-    InventorySlots INT DEFAULT 0
+    InventorySlot INT DEFAULT 0
 );
 
 --  Personnages créés par les joueurs
@@ -21,28 +21,30 @@ CREATE TABLE `Character` (
     Strength INT,
     Agility INT,
     Intelligence INT,
+    pv INT,
+    mana INT,
     FOREIGN KEY (PlayerID) REFERENCES Player(ID)
 );
 
 -- Objets
-CREATE TABLE Object (
+CREATE TABLE ObjectTest (
     ID INT AUTO_INCREMENT PRIMARY KEY,
-    ObjectName VARCHAR(100),
-    Type ENUM('Arme', 'Artefact', 'Potion', 'Armure'),
-    Strength INT,
-    Defence INT,
-    Effects VARCHAR(100),
-    Price INT
+    ObjectName VARCHAR(100) UNIQUE,
+    Type ENUM('Arme', 'Artefact', 'Potion', 'Armure', 'Potions', 'Sword') DEFAULT Null,
+    Strength INT DEFAULT 0,
+    Defence INT DEFAULT 0,
+    Effects VARCHAR(100) DEFAULT Null,
+    Price INT DEFAULT 0
 );
 
 --  Inventaire des joueurs
 CREATE TABLE Inventory (
     PlayerID INT,
-    ObjectID INT,
+    ObjectName VARCHAR(100),
     MaxCapacity INT DEFAULT 1,
-    PRIMARY KEY (PlayerID, ObjectID),
+    PRIMARY KEY (PlayerID, ObjectName),
     FOREIGN KEY (PlayerID) REFERENCES Player(ID),
-    FOREIGN KEY (ObjectID) REFERENCES Object(ID)
+    FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName)
 );
 
 --  PNJ
@@ -65,10 +67,11 @@ CREATE TABLE Quest (
 --  Objets récompensés par des quêtes
 CREATE TABLE Quest_Objects (
     QuestID INT,
-    ObjectID INT,
-    PRIMARY KEY (QuestID, ObjectID),
+    ObjectName VARCHAR(100),
+    Gold INT,
+    PRIMARY KEY (QuestID, ObjectName),
     FOREIGN KEY (QuestID) REFERENCES Quest(ID),
-    FOREIGN KEY (ObjectID) REFERENCES Object(ID)
+    FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName)
 );
 
 --  Monstres
@@ -83,10 +86,11 @@ CREATE TABLE Bestiary (
 
 --  Récompenses obtenues sur les monstres
 CREATE TABLE Rewards (
-    MonsterID INT,
-    ObjectID INT,
+    MonsterID INT NOT NULL,
+    ObjectName VARCHAR(100), 
     DropRate INT,
-    PRIMARY KEY (MonsterID, ObjectID),
+    Quantity INT,
+    PRIMARY KEY (MonsterID, ObjectName),
     FOREIGN KEY (MonsterID) REFERENCES Bestiary(ID),
-    FOREIGN KEY (ObjectID) REFERENCES Object(ID)
+    FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName)
 );

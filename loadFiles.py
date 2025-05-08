@@ -23,7 +23,7 @@ def loadJSONfile(filePath):
 
 def loadXMLfile(filePath):
     """
-    Load an XML file and return its contents as a dictionary.
+    Load an XML file and return its root element.
     """
     tree = ET.parse(filePath)
     root = tree.getroot()
@@ -67,6 +67,25 @@ def connectToDatabase():
     except mysql.connector.Error as err:
         print(f"Error: {err}")
         return None
+
+def extract_property_value(property_str):
+    """
+    Extract numeric value from a property string like 'Puissance d'attaque: 15'.
+    Returns None if no number is found.
+    """
+    property = property_str.split(':')
+    if len(property) > 1:
+        if property[0] == 'Effet':
+            # Extract the effect string
+            return property[1].strip()
+        elif property[0] == 'Puissance d\'attaque' or property[0] == 'Défense':
+            return int(property[1].strip())
+        else:  
+            # Handle other properties if needed
+            return property_str
+    else:
+        return property[0].strip()
+        
 
 def extract_property_value(property_str):
     """
@@ -175,20 +194,33 @@ def loadObjectData(cursor, objectFile):
     """
     Load object data from a CSV file into the database.
     """
+    i = 0
     for object in objectFile:
-        name, type_, properties, price = (
-            object['Nom'], object['Type'], object['Propriétés'], object['Prix']
+        name, type_, properties, price, gold = (
+            object['Nom'], object['Type'], object['Propriétés'], object['Prix'], 'Gold'
         )
         
-        objectPrice = price if checkInteger(price) else None
-        type_ = type_ if type_ in ['Arme', 'Armure', 'Potion', 'Artefact'] else None
+        objectPrice = int(price) if checkInteger(price) else 0
+        type_ = type_ if type_ in ['Arme', 'Armure', 'Potion', 'Artefact', 'Potions', 'Sword'] else None
 
         strength = 0
         Defence = 0
         effect = None
+        
+        cursor.execute("SELECT COUNT(*) FROM ObjectTest WHERE ObjectName = 'Gold'")
+        if cursor.fetchone()[0] == 0:
+            # Only insert if player doesn't exist
+            cursor.execute("INSERT INTO ObjectTest (ObjectName) " \
+            "VALUES (%s)", (gold,))
+            print(f"Added object: {gold}")
+        
         # Extract properties
         if type_ == 'Arme' and type_ is not None:
             strength = extract_property_value(properties)
+            if isinstance(strength, str):
+                # If the property is a string, we can assume it's an effect
+                effect = strength
+                strength = 0
             if isinstance(strength, str):
                 # If the property is a string, we can assume it's an effect
                 effect = strength
@@ -199,62 +231,152 @@ def loadObjectData(cursor, objectFile):
                 # If the property is a string, we can assume it's an effect
                 effect = Defence
                 Defence = 0
-        elif type_ == 'Potion' and type_ is not None:
+        elif type_ == 'Potion' or type_ == 'Potions' and type_ is not None:
             effect = extract_property_value(properties)
         elif type_ == 'Artefact' and type_ is not None:
             effect = extract_property_value(properties)
-
+        i += 1
         # # Check if player already exists
-        cursor.execute("SELECT COUNT(*) FROM Object WHERE ObjectName = %s", 
+        cursor.execute("SELECT COUNT(*) FROM ObjectTest WHERE ObjectName = %s", 
                     (name,))
-    
-        if cursor.fetchone()[0] == 0 and objectPrice is not None and type_ is not None:
-            cursor.execute("INSERT INTO Object (ObjectName, Type, Strength, Defence, Effects, Price) " \
-            "VALUES (%s, %s, %s, %s, %s, %s)", (name, type_, strength, Defence, effect, objectPrice))
-            print(f"Added player: {object['Nom']}")
 
-def loadMonsterData(cursor, monsterFile):
+        if cursor.fetchone()[0] == 0 and type_ is not None:
+            # Only insert if player doesn't exist
+            cursor.execute("INSERT INTO ObjectTest (ObjectName, Type, Strength, Defence, Effects, Price) " \
+            "VALUES (%s, %s, %s, %s, %s, %s)", (name,type_, strength, Defence, effect, objectPrice))
+            print(f"Added object: {name}")
+        else:
+            print(f"Object {name} already exists in the database. Checking for updates...")
+            # If the object already exists, check if the attributes are the same
+            # check if the name is the same
+            # check if the attributs are the same
+            cursor.execute("SELECT Strength, Defence, Effects, Price FROM ObjectTest WHERE ObjectName = %s", 
+                    (name,))
+            result = cursor.fetchone()
+            if result:
+                db_strength, db_defence, db_effects, db_price = result
+                if (strength != db_strength or Defence != db_defence or effect != db_effects or objectPrice != db_price):
+                    cursor.execute("SELECT COUNT(*) FROM ObjectTest WHERE ObjectName = %s", 
+                    (name + str(i),))
+                    if cursor.fetchone()[0] == 0:
+                    # add another object with the same name
+                        cursor.execute("INSERT INTO ObjectTest (ObjectName, Type, Strength, Defence, Effects, Price) " \
+                        "VALUES (%s, %s, %s, %s, %s, %s)", (name + str(i), type_, db_strength, db_defence, db_effects, db_price))
+                        
+                else:
+                    print(f"Object {name} already exists with the same attributes. No update needed.")
+             
+
+
+def replace_underscores_with_spaces(text):
+    """
+    Replace underscores in a string with spaces.
+    """
+    final_text = ""
+    alist = ['d', 'D', 'l', 'L']
+    if isinstance(text, str):
+        text = text.split('_')
+        for i in text:
+            if len(i) == 1 and i in alist:
+                final_text += i + "'"
+            else:
+                final_text += i + " "
+    return final_text.strip()
+ 
+
+
+def loadMonsterData(cursor, root):
     """
     Load monster data from an XML file into the database, including drops.
     """
-    for monster in monsterFile['monstres']['monstre']:
-        monster_id = int(monster['id'])
-        name = monster['nom']
-        attack = int(monster['attaque'])
-        defense = int(monster['defense'])
-        life_points = int(monster['vie'])
+    #enlever les _ pour les objets
+    
+    print("Loading monster data...")
+    for monster in root.findall('monstre'):
+        monster_attaque = monster.find('attaque')
+        monster_defense = monster.find('defense')
+        monster_id = monster.find('id')
+        monster_name = monster.find('nom')
+        monster_vie = monster.find('vie')
 
-        # Check if the monster already exists
-        cursor.execute("SELECT COUNT(*) FROM Bestiary WHERE ID = %s", (monster_id,))
+        if monster_attaque is not None:
+            monster_attaque = int(monster_attaque.text)
+        if monster_defense is not None:
+            monster_defense = int(monster_defense.text)
+        if monster_id is not None:
+            monster_id = int(monster_id.text) + 1
+        if monster_name is not None:
+            monster_name = monster_name.text
+        if monster_vie is not None:
+            monster_vie = int(monster_vie.text)
+        
+        # Vérifier que tous les champs nécessaires sont présents
+        if monster_id is None or monster_name is None or monster_vie is None:
+            print(f"Skipping monster with missing data: ID={monster_id}, Name={monster_name}, LifePoints={monster_vie}")
+            continue
+
+        # Insérer les données du monstre dans la table Bestiary
+        cursor.execute(
+            "SELECT COUNT(*) FROM Bestiary WHERE ID = %s",
+            (monster_id,)
+        )
         if cursor.fetchone()[0] == 0:
             cursor.execute(
                 "INSERT INTO Bestiary (ID, BeastName, Attack, Defence, LifePoints) "
                 "VALUES (%s, %s, %s, %s, %s)",
-                (monster_id, name, attack, defense, life_points)
+                (monster_id, monster_name, monster_attaque, monster_defense, monster_vie)
             )
-            print(f"Added monster: {name}")
+            print(f"Added monster: {monster_name}")
+
+        # Vérifier que le monstre existe dans Bestiary avant d'insérer les drops
+        cursor.execute(
+            "SELECT COUNT(*) FROM Bestiary WHERE ID = %s",
+            (monster_id,)
+        )
+        if cursor.fetchone()[0] == 0:
+            print(f"Error: Monster with ID {monster_id} does not exist in Bestiary. Skipping drops.")
+            continue
 
         # Process drops
-        if 'drops' in monster:
-            for drop_name, drop_details in monster['drops'].items():
-                if isinstance(drop_details, dict):
-                    quantity = int(drop_details.get('nombre', 0))
-                    probability = int(drop_details.get('probabilité', 0))
+     
+        drops = monster.find('drops')
+        for drop in drops:
+            if replace_underscores_with_spaces(drop.tag) == 'Or':
+                drop_name = 'Gold'
+            else:
+                drop_name = replace_underscores_with_spaces(drop.tag)
+        
+            drop_quantity = int(drop.find('nombre').text) if drop.find('nombre') is not None else 0
+            drop_probability = int(drop.find('probabilité').text) if drop.find('probabilité') is not None else 0
 
-                    # Check if the drop already exists
-                    cursor.execute(
-                        "SELECT COUNT(*) FROM Rewards WHERE MonsterID = %s AND ObjectID = %s",
-                        (monster_id, drop_name)
-                    )
-                    if cursor.fetchone()[0] == 0:
-                        cursor.execute(
-                            "INSERT INTO Rewards (MonsterID, ObjectID, DropRate) "
-                            "VALUES (%s, %s, %s)",
-                            (monster_id, drop_name, probability)
-                        )
-                        print(f"Added drop: {drop_name} for monster {name}")
 
-def loadQuestData(cursor, questFile):
+           
+                
+            cursor.execute("SELECT COUNT(*) FROM ObjectTest WHERE ObjectName = %s", (drop_name,))
+
+            if cursor.fetchone()[0] == 0:
+                print(f"Warning: '{drop_name}' not found in ObjectTest. Skipping this drop.")
+            else:
+                # Check if the drop already exists for the monster
+                cursor.execute(
+                    "SELECT COUNT(*) FROM Rewards WHERE MonsterID = %s AND ObjectName = %s",
+                    (monster_id, drop_name)
+                )
+                if cursor.fetchone()[0] > 0:
+                    print(f"Drop '{drop_name}' already exists for monster ID {monster_id}. Skipping insert.")
+                    continue
+                # Insert drop data into the Rewards table
+                cursor.execute(
+                    "INSERT INTO Rewards (MonsterID, ObjectName, DropRate, Quantity) "
+                    "VALUES (%s, %s, %s, %s)",
+                    (monster_id, drop_name, drop_probability, drop_quantity)
+                )
+        
+        
+            print("1")
+            print(f"Added drop: {drop_name} for monster: {monster_name}")
+                
+def loadQuestData(cursor, root):
     """
     Load quest data from an XML file into the database.
     """
