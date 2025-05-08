@@ -1,5 +1,6 @@
 from utils import *
-
+from loadFiles import *
+import sys
 
 class MainWindow(QMainWindow):
     """
@@ -175,12 +176,8 @@ class MainWindow(QMainWindow):
         else:
             self.label.setText("Database connection failed.")
 
-   
-    
 
 if __name__ == "__main__":
-    # Load CSV file
-    # main()
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()

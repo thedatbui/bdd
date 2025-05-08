@@ -1,88 +1,5 @@
-import json
-import csv
-import xml.etree.ElementTree as ET
-import mysql.connector
-import re
-
-def loadCSVfile(filePath):
-    """
-    Load a CSV file and return its contents as a list of dictionaries.
-    Each dictionary represents a row in the CSV file, with the keys being the column headers.
-    """
+from utils import *
   
-    with open(filePath, mode='r', encoding='utf-8') as csvfile:
-        reader = csv.DictReader(csvfile)
-        return [row for row in reader]
-
-def loadJSONfile(filePath):
-    """
-    Load a JSON file and return its contents as a dictionary.
-    """
-    with open(filePath, mode='r', encoding='utf-8') as jsonfile:
-        return json.load(jsonfile)
-
-def loadXMLfile(filePath):
-    """
-    Load an XML file and return its root element.
-    """
-    tree = ET.parse(filePath)
-    return tree.getroot()
-
-    
-def checkInteger(value):
-    """
-    Check if the value is a valid integer.
-    """
-    try:
-        int(value)
-        if int(value) > 0:
-            return True
-        else:
-            return False
-    except ValueError:
-        return False
-    except TypeError:
-        return False
-    except AttributeError:
-        return False
-   
-def connectToDatabase():
-    """
-    Connect to the MySQL database and return the connection object.
-    """
-    try:
-        connection = mysql.connector.connect(
-            host='localhost',
-            user='dat',
-            password='Alckart0246',
-            database='InventaireRPG', 
-            auth_plugin='mysql_native_password',
-            use_pure=True,
-            ssl_disabled=True
-        )
-        return connection
-    except mysql.connector.Error as err:
-        print(f"Error: {err}")
-        return None
-
-def extract_property_value(property_str):
-    """
-    Extract numeric value from a property string like 'Puissance d'attaque: 15'.
-    Returns None if no number is found.
-    """
-    property = property_str.split(':')
-    if len(property) > 1:
-        if property[0] == 'Effet':
-            # Extract the effect string
-            return property[1].strip()
-        elif property[0] == 'Puissance d\'attaque' or property[0] == 'Défense':
-            return int(property[1].strip())
-        else:  
-            # Handle other properties if needed
-            return property_str
-    else:
-        return property[0].strip()
-        
 def loadPlayerData(cursor, playerFile):
      """
      Load player data from a CSV file into the database.
@@ -99,8 +16,7 @@ def loadPlayerData(cursor, playerFile):
         Money = Money if checkInteger(Money) else None
         InventorySlots = InventorySlots if checkInteger(InventorySlots) else None
         ID = ID if checkInteger(ID) else None
-
-    
+        
         # # Check if player already exists
         cursor.execute("SELECT COUNT(*) FROM Player WHERE ID = %s OR UserName = %s", 
                     (player['ID'], player['NomUtilisateur']))
@@ -267,9 +183,6 @@ def loadMonsterData(cursor, root):
         
             drop_quantity = int(drop.find('nombre').text) if drop.find('nombre') is not None else 0
             drop_probability = int(drop.find('probabilité').text) if drop.find('probabilité') is not None else 0
-
-
-           
                 
             cursor.execute("SELECT COUNT(*) FROM ObjectTest WHERE ObjectName = %s", (drop_name,))
 
@@ -318,9 +231,6 @@ def loadQuestData(cursor, root):
             )
             print(f"Added quest: {quest_name}")
             
-        
-        
-
 def load_spell_data(cursor, spells):
     """
     Load spell data from a CSV file into the database.
