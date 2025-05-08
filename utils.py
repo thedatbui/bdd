@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
-from PyQt5.QtWidgets import QMainWindow, QApplication, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QPushButton
+from PyQt5.QtWidgets import QMainWindow, QApplication, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QPushButton, QScrollArea, QLineEdit
 from PyQt5.QtCore import Qt
 import json
 import csv
@@ -85,7 +85,7 @@ def extract_property_value(property_str):
     else:
         return property[0].strip()
 
-def setupButtons(mainLayout, *button_texts):
+def setupButtons(mainLayout, size, *button_texts):
     """Create buttons and add them to a layout within mainLayout"""
     layout = QHBoxLayout()
     layout.setAlignment(Qt.AlignCenter | Qt.AlignHCenter)
@@ -93,7 +93,7 @@ def setupButtons(mainLayout, *button_texts):
     
     for text in button_texts:
         button = QPushButton(text)
-        button.setFixedSize(200, 50)
+        button.setFixedSize(size[0], size[1])
         button.setStyleSheet("background-color: lightblue; font-size: 16px;")
         layout.addWidget(button)
         buttons.append(button)
@@ -123,13 +123,16 @@ def setupLabel(mainLayout, *text):
     Create a label with the specified text and add it to the given layout.
     """
     layout = QHBoxLayout()
+    labels = []
     for text in text:
         label = QLabel(text)
         label.setStyleSheet("font-size: 16px;")
         layout.addWidget(label)
-
+        labels.append(label)
+    
     mainLayout.addLayout(layout)
-    return label
+    return labels if len(labels) > 1 else labels[0]
+    
 
 def setupLineEdit(mainLayout, *labelText):
     """
