@@ -296,7 +296,7 @@
             "Vie": 65,
             "Mana": 99,
             "Force": 5,
-            "Intelligence": 10,
+            "Intelligence": "Beaucoup trop!",
             "Agilite": 17,
             "utilisateur": "TrollFace_1337"
         },
@@ -7714,7 +7714,7 @@
             "Nom": "I",
             "Classe": "Berserker",
             "Vie": 48,
-            "Mana": 0,
+            "Mana": "Pour quoi faire?",
             "Force": 6,
             "Intelligence": 8,
             "Agilite": 10,
@@ -7856,7 +7856,7 @@
             "Vie": 47,
             "Mana": 90,
             "Force": 9,
-            "Intelligence": 6,
+            "Intelligence": "Regénérer la réponse",
             "Agilite": 3,
             "utilisateur": "SniperLamaDu93"
         },

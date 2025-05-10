@@ -53,6 +53,8 @@ def connectToDatabase():
     try:
         connection = mysql.connector.connect(
             host='localhost',
+            user='root', # Create ur own user
+            password='', # Create ur own password
             database='InventaireRPG', 
             auth_plugin='mysql_native_password',
             use_pure=True,
@@ -106,7 +108,7 @@ def loadPlayerData(cursor, playerFile):
         if cursor.fetchone()[0] == 0 and level is not None and \
         XP is not None and Money is not None and InventorySlots is not None:
             # Only insert if player doesn't exist
-            cursor.execute("INSERT INTO Player (ID, UserName, PlayerLevel, ExperiencePoints, WalletCredits, InventorySlots) " \
+            cursor.execute("INSERT INTO Player (ID, UserName, PlayerLevel, ExperiencePoints, WalletCredits, InventorySlot) " \
             "VALUES (%s, %s, %s, %s, %s, %s)", (ID, userName, \
             level, XP, Money, InventorySlots))
             print(f"Added player: {player['NomUtilisateur']}")
@@ -390,6 +392,14 @@ def insert_player(cursor, player):
     )
     cursor.execute(sql, params)
 
+def to_int(value):
+    """
+    Convertit une valeur en entier. Si la conversion échoue, retourne 0.
+    """
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return 0
 
 def loadCharacterData(cursor, characters):
     """
@@ -434,12 +444,12 @@ def loadCharacterData(cursor, characters):
             continue
         player_id = result[0]
 
-        # Stats
-        force = c.get("Force", 0)
-        agi = c.get("Agilite", 0)
-        intel = c.get("Intelligence", 0)
-        hp = c.get("Vie", 0)
-        mana = c.get("Mana", 0)
+        force = to_int(c.get("Force"))
+        agi = to_int(c.get("Agilite"))
+        intel = to_int(c.get("Intelligence"))
+        hp = to_int(c.get("Vie"))
+        mana = to_int(c.get("Mana"))
+
 
         # Insertion
         try:
@@ -451,6 +461,69 @@ def loadCharacterData(cursor, characters):
         except Exception as e:
             print(f"⚠️ Erreur à l'insertion de '{char_name}' : {e}")
 
+
+def loadNpcData(cursor, npcFile):
+    """
+    Load NPCs from a JSON file into the NPC table & other related tables 
+    """
+    npcs = npcFile  
+
+    for npc in npcs:
+        full_name = npc.get("Nom", "").strip()
+        dialogue = npc.get("Dialogue", "").strip()
+
+        if not full_name:
+            print("⚠️ PNJ sans nom trouvé → ignoré")
+            continue
+
+        # Séparer le nom et le type si une virgule est présente
+        if "," in full_name:
+            name, pnj_type = [part.strip() for part in full_name.split(",", 1)]
+        else:
+            name = full_name
+            pnj_type = "Inconnu"
+
+        # Vérifie si le PNJ existe déjà
+        cursor.execute("SELECT ID FROM NPC WHERE NpcName = %s", (name,))
+        result = cursor.fetchone()
+        if result:
+            print(f"PNJ déjà présent : {name}")
+            npc_id = result[0]
+        else:
+            cursor.execute("INSERT INTO NPC (NpcName, Dialogue, Type) VALUES (%s, %s, %s)", (name, dialogue, pnj_type))
+            npc_id = cursor.lastrowid
+            print(f"✅ Ajouté PNJ : {name}")
+
+        # Chargement de l'inventaire
+        objets_vus = {}
+        for item in npc.get("Inventaire", []):
+            objet = item.strip()
+
+            if not objet:
+                continue
+            objets_vus[objet] = objets_vus.get(objet, 0) + 1
+
+        for objet, quantite in objets_vus.items():
+            try:
+                # Vérifie si l’objet existe dans ObjectTest
+                cursor.execute("SELECT COUNT(*) FROM ObjectTest WHERE ObjectName = %s", (objet,))
+                if cursor.fetchone()[0] == 0:
+                    print(f"⚠️ Objet inconnu '{objet}' → ignoré pour PNJ '{name}'")
+                    continue
+
+                # Insère l'objet et la quantité
+                cursor.execute("""
+                    INSERT INTO NPCInventory (NPCID, ObjectName, Quantity)
+                    VALUES (%s, %s, %s)
+                """, (npc_id, objet, quantite))
+                print(f"✅ Ajouté objet '{objet}' ×{quantite} pour PNJ '{name}'")
+
+            except Exception as e:
+                print(f"⚠️ Erreur ajout objet '{objet}' pour PNJ '{name}' : {e}")
+
+
+        
+
 def main():
     """
     Main function to load data from CSV and JSON files into the database.
@@ -460,14 +533,16 @@ def main():
     objectFile = loadCSVfile('data/objets.csv')
     # spellsFile = loadCSVfile('bdd/data/sorts.csv')
 
-    # # Load JSON file
+    # Load JSON file
     charactersFile = loadJSONfile('data/personnages.json')
     characters = charactersFile["personnages"]
-    # npcFile = loadJSONfile('data/pnjs.json')
+    npcFile = loadJSONfile('data/pnjs.json')
+    NPCs = npcFile["PNJs"]
+    
 
     # Load XML file
     monsterFile = loadXMLfile('data/monstres.xml')
-    monsterFile = loadXMLfile('data/monstres.xml')
+    
     # questFile = loadXMLfile('data/quetes.xml')
 
     # Connect to the database
@@ -487,6 +562,10 @@ def main():
 
     # Load Characters related to players
     loadCharacterData(cursor, characters)
+
+    # Load NPC data
+    loadNpcData(cursor, NPCs)
+    
 
     #loadQuestData(cursor, questFile)
         
