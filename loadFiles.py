@@ -1,6 +1,88 @@
-from utils_loadFiles import *
-from src.db_utils.DataBase import DataBase
+import json
+import csv
+import xml.etree.ElementTree as ET
+import mysql.connector
+import re
 
+def loadCSVfile(filePath):
+    """
+    Load a CSV file and return its contents as a list of dictionaries.
+    Each dictionary represents a row in the CSV file, with the keys being the column headers.
+    """
+  
+    with open(filePath, mode='r', encoding='utf-8') as csvfile:
+        reader = csv.DictReader(csvfile)
+        return [row for row in reader]
+
+def loadJSONfile(filePath):
+    """
+    Load a JSON file and return its contents as a dictionary.
+    """
+    with open(filePath, mode='r', encoding='utf-8') as jsonfile:
+        return json.load(jsonfile)
+
+def loadXMLfile(filePath):
+    """
+    Load an XML file and return its root element.
+    """
+    tree = ET.parse(filePath)
+    return tree.getroot()
+
+    
+def checkInteger(value):
+    """
+    Check if the value is a valid integer.
+    """
+    try:
+        int(value)
+        if int(value) > 0:
+            return True
+        else:
+            return False
+    except ValueError:
+        return False
+    except TypeError:
+        return False
+    except AttributeError:
+        return False
+   
+def connectToDatabase():
+    """
+    Connect to the MySQL database and return the connection object.
+    """
+    try:
+        connection = mysql.connector.connect(
+            host='localhost',
+            user='root', # Create ur own user
+            password='', # Create ur own password
+            database='InventaireRPG', 
+            auth_plugin='mysql_native_password',
+            use_pure=True,
+            ssl_disabled=True
+        )
+        return connection
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+        return None
+
+def extract_property_value(property_str):
+    """
+    Extract numeric value from a property string like 'Puissance d'attaque: 15'.
+    Returns None if no number is found.
+    """
+    property = property_str.split(':')
+    if len(property) > 1:
+        if property[0] == 'Effet':
+            # Extract the effect string
+            return property[1].strip()
+        elif property[0] == 'Puissance d\'attaque' or property[0] == 'Défense':
+            return int(property[1].strip())
+        else:  
+            # Handle other properties if needed
+            return property_str
+    else:
+        return property[0].strip()
+        
 def loadPlayerData(cursor, playerFile):
      """
      Load player data from a CSV file into the database.
@@ -347,6 +429,14 @@ def insert_player(cursor, player):
     )
     cursor.execute(sql, params)
 
+def to_int(value):
+    """
+    Convertit une valeur en entier. Si la conversion échoue, retourne 0.
+    """
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return 0
 
 def loadCharacterData(cursor, characters):
     """
@@ -391,12 +481,12 @@ def loadCharacterData(cursor, characters):
             continue
         player_id = result[0]
 
-        # Stats
-        force = c.get("Force", 0)
-        agi = c.get("Agilite", 0)
-        intel = c.get("Intelligence", 0)
-        hp = c.get("Vie", 0)
-        mana = c.get("Mana", 0)
+        force = to_int(c.get("Force"))
+        agi = to_int(c.get("Agilite"))
+        intel = to_int(c.get("Intelligence"))
+        hp = to_int(c.get("Vie"))
+        mana = to_int(c.get("Mana"))
+
 
         # Insertion
         try:
@@ -408,6 +498,69 @@ def loadCharacterData(cursor, characters):
         except Exception as e:
             print(f"⚠️ Erreur à l'insertion de '{char_name}' : {e}")
 
+
+def loadNpcData(cursor, npcFile):
+    """
+    Load NPCs from a JSON file into the NPC table & other related tables 
+    """
+    npcs = npcFile  
+
+    for npc in npcs:
+        full_name = npc.get("Nom", "").strip()
+        dialogue = npc.get("Dialogue", "").strip()
+
+        if not full_name:
+            print("⚠️ PNJ sans nom trouvé → ignoré")
+            continue
+
+        # Séparer le nom et le type si une virgule est présente
+        if "," in full_name:
+            name, pnj_type = [part.strip() for part in full_name.split(",", 1)]
+        else:
+            name = full_name
+            pnj_type = "Inconnu"
+
+        # Vérifie si le PNJ existe déjà
+        cursor.execute("SELECT ID FROM NPC WHERE NpcName = %s", (name,))
+        result = cursor.fetchone()
+        if result:
+            print(f"PNJ déjà présent : {name}")
+            npc_id = result[0]
+        else:
+            cursor.execute("INSERT INTO NPC (NpcName, Dialogue, Type) VALUES (%s, %s, %s)", (name, dialogue, pnj_type))
+            npc_id = cursor.lastrowid
+            print(f"✅ Ajouté PNJ : {name}")
+
+        # Chargement de l'inventaire
+        objets_vus = {}
+        for item in npc.get("Inventaire", []):
+            objet = item.strip()
+
+            if not objet:
+                continue
+            objets_vus[objet] = objets_vus.get(objet, 0) + 1
+
+        for objet, quantite in objets_vus.items():
+            try:
+                # Vérifie si l’objet existe dans ObjectTest
+                cursor.execute("SELECT COUNT(*) FROM ObjectTest WHERE ObjectName = %s", (objet,))
+                if cursor.fetchone()[0] == 0:
+                    print(f"⚠️ Objet inconnu '{objet}' → ignoré pour PNJ '{name}'")
+                    continue
+
+                # Insère l'objet et la quantité
+                cursor.execute("""
+                    INSERT INTO NPCInventory (NPCID, ObjectName, Quantity)
+                    VALUES (%s, %s, %s)
+                """, (npc_id, objet, quantite))
+                print(f"✅ Ajouté objet '{objet}' ×{quantite} pour PNJ '{name}'")
+
+            except Exception as e:
+                print(f"⚠️ Erreur ajout objet '{objet}' pour PNJ '{name}' : {e}")
+
+
+        
+
 def main():
     """
     Main function to load data from CSV and JSON files into the database.
@@ -417,15 +570,17 @@ def main():
     objectFile = loadCSVfile('data/objets.csv')
     # spellsFile = loadCSVfile('bdd/data/sorts.csv')
 
-    # # Load JSON file
+    # Load JSON file
     charactersFile = loadJSONfile('data/personnages.json')
     characters = charactersFile["personnages"]
-    # npcFile = loadJSONfile('data/pnjs.json')
+    npcFile = loadJSONfile('data/pnjs.json')
+    NPCs = npcFile["PNJs"]
+    
 
     # Load XML file
     monsterFile = loadXMLfile('data/monstres.xml')
     monsterFile = loadXMLfile('data/monstres.xml')
-    questFile = loadXMLfile('data/quetes.xml')
+    # questFile = loadXMLfile('data/quetes.xml')
 
     # Connect to the database
     dataBase = DataBase()
@@ -442,6 +597,10 @@ def main():
 
     # Load Characters related to players
     loadCharacterData(cursor, characters)
+
+    # Load NPC data
+    loadNpcData(cursor, NPCs)
+    
 
     loadQuestData(cursor, questFile)
         

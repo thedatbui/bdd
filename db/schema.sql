@@ -17,7 +17,7 @@ CREATE TABLE `Character` (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     PlayerID INT,
     CharacterName VARCHAR(50),
-    Class ENUM("Assassin", "Archer", "Barbare", "Berserker", "Chasseur","Chevalier", "Démoniste", "Druide", "Enchanteresse", "Guerrier","Illusionniste", "Mage", "Moine", "Nécromancien", "Paladin","Prêtresse", "Rôdeur", "Sorcière", "Templier"),
+    Class ENUM("Assassin", "Archer", "Barbare", "Berserker", "Chasseur","Chevalier", "Démoniste", "Druide", "Enchanteresse", "Guerrier","Illusionniste", "Mage", "Moine", "Nécromancien", "Paladin","Prêtresse", "Rôdeur", "Sorcière", "Templier", "Voleur"),
     Strength INT,
     Agility INT,
     Intelligence INT,
@@ -51,10 +51,12 @@ CREATE TABLE Inventory (
 CREATE TABLE NPC (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     NpcName VARCHAR(50),
-    Dialogue TEXT
+    Dialogue TEXT,
+    Type VARCHAR(50)
+
 );
 
---  Quêtes
+--  Quêtes disponibles dans le jeu.
 CREATE TABLE Quest (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     QuestName VARCHAR(100),
@@ -64,7 +66,7 @@ CREATE TABLE Quest (
     RewardGold INT
 );
 
---  Objets récompensés par des quêtes
+--  Objets récompensés par des quêtes (Définir quels objets sont donnés en récompense à la fin d'une quête.)
 CREATE TABLE Quest_Objects (
     QuestID INT,
     ObjectName VARCHAR(100),
@@ -92,5 +94,23 @@ CREATE TABLE Rewards (
     Quantity INT,
     PRIMARY KEY (MonsterID, ObjectName),
     FOREIGN KEY (MonsterID) REFERENCES Bestiary(ID),
+    FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName)
+);
+
+-- PNJ ↔ Quêtes
+CREATE TABLE NPCQuest (
+    NPCID INT,
+    QuestName VARCHAR(100),
+    PRIMARY KEY (NPCID, QuestName),
+    FOREIGN KEY (NPCID) REFERENCES NPC(ID)
+);
+
+-- PNJ ↔ Objets
+CREATE TABLE NPCInventory (
+    ID INT AUTO_INCREMENT PRIMARY KEY,  -- Identifiant unique
+    NPCID INT,
+    ObjectName VARCHAR(100),
+    Quantity INT DEFAULT 1,
+    FOREIGN KEY (NPCID) REFERENCES NPC(ID),
     FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName)
 );
