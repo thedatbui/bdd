@@ -6,6 +6,7 @@ from gui.Component import *
 from gui.utils import setMenuState
 from gui.MenuManager import SceneManager
 import loadFiles as loadFiles
+import loadFiles as loadFiles
 class MainWindow(QMainWindow):
     """
     Main application window.
