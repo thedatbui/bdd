@@ -1,2 +1,12 @@
 .DS_Store
 .DS_Store
+__pycache__/loadFiles.cpython-312.pyc
+__pycache__/utils_loadFiles.cpython-312.pyc
+gui/__pycache__/Character.cpython-312.pyc
+gui/__pycache__/Component.cpython-312.pyc
+gui/__pycache__/MenuManager.cpython-312.pyc
+gui/__pycache__/Player.cpython-312.pyc
+gui/__pycache__/SetupMenu.cpython-312.pyc
+gui/__pycache__/utils.cpython-312.pyc
+src/db_utils/__pycache__/connectToDataBase.cpython-312.pyc
+src/db_utils/__pycache__/DataBase.cpython-312.pyc
