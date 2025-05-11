@@ -68,7 +68,7 @@ CREATE TABLE Quest (
 CREATE TABLE Quest_Objects (
     QuestID INT,
     ObjectName VARCHAR(100),
-    Gold INT,
+    Quantity INT,
     PRIMARY KEY (QuestID, ObjectName),
     FOREIGN KEY (QuestID) REFERENCES Quest(ID),
     FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName)

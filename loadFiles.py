@@ -219,18 +219,62 @@ def loadQuestData(cursor, root):
         quest_name = quest.find('Nom').text
         quest_xp = int(quest.find('Expérience').text)
         
+        
         # Insert quest data into the Quest table
         cursor.execute(
-            "SELECT COUNT(*) FROM Quest WHERE Name = %s",
+            "SELECT COUNT(*) FROM Quest WHERE QuestName = %s",
             (quest_name,)
         )
         if cursor.fetchone()[0] == 0:
             cursor.execute(
-                "INSERT INTO Quest (QuestName, Description, DifficultyLevel, RewardXP, ) "
+                "INSERT INTO Quest (QuestName, Description, DifficultyLevel, RewardXP) "
                 "VALUES (%s, %s, %s, %s)",
                 (quest_name, quest_description, quest_difficulty_level, quest_xp)
             )
             print(f"Added quest: {quest_name}")
+            
+        # Recup the quest ID
+        cursor.execute("Select ID From Quest WHERE QuestName = %s", (quest_name,))
+        quest_id_result = cursor.fetchone()
+        if not quest_id_result:
+            print(f"Error: Quest ID not found for '{quest_name}'. Skipping rewards.")
+            continue
+        quest_id = quest_id_result[0]
+            
+            
+        
+        rewards = quest.find('Récompenses')
+        if rewards is not None:
+            for reward in rewards:
+                if reward.tag == 'Or':
+                    reward_name = 'Gold'
+                    reward_quantity = int (reward.text)
+                else:
+                    reward_name = reward.text
+                    reward_quantity = 1
+                
+                cursor.execute("SELECT COUNT(*) FROM ObjectTest WHERE ObjectName = %s", (reward_name,))
+                if cursor.fetchone()[0] == 0:
+                    print(f"Warning: '{reward_name}' not found in ObjectTest. Skipping this reward.")
+                else:
+                    # Check if the reward already exists for the quest
+                    cursor.execute(
+                        "SELECT COUNT(*) FROM Quest_Objects WHERE QuestID = %s AND ObjectName = %s",
+                        (quest_id, reward_name)
+                    )
+                    if cursor.fetchone()[0] > 0:
+                        print(f"Reward '{reward_name}' already exists for quest '{quest_name}'. Skipping insert.")
+                        continue
+                    # Insert reward data into the QuestRewards table
+                    cursor.execute(
+                        "INSERT INTO Quest_Objects (QuestID, ObjectName, Quantity) "
+                        "VALUES (%s, %s, %s)",
+                        (quest_id, reward_name, reward_quantity)
+                    )
+                    
+                    print(f"Added reward: {reward_name} for quest: {quest_name}")
+
+    
             
 def load_spell_data(cursor, spells):
     """
@@ -381,7 +425,7 @@ def main():
     # Load XML file
     monsterFile = loadXMLfile('data/monstres.xml')
     monsterFile = loadXMLfile('data/monstres.xml')
-    # questFile = loadXMLfile('data/quetes.xml')
+    questFile = loadXMLfile('data/quetes.xml')
 
     # Connect to the database
     dataBase = DataBase()
@@ -399,7 +443,7 @@ def main():
     # Load Characters related to players
     loadCharacterData(cursor, characters)
 
-    #loadQuestData(cursor, questFile)
+    loadQuestData(cursor, questFile)
         
     # Fermer la connexion
     dataBase.closeConnection()
