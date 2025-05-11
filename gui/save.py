@@ -1,6 +1,7 @@
-from utils import *
+from gui.utils import *
 from loadFiles import *
 import sys
+from gui.Component import *
 
 class MainWindow(QMainWindow):
     """
@@ -79,13 +80,6 @@ class MainWindow(QMainWindow):
 
         self.inputLayout = setupLineEdit(self.mainLayout, "Enter your userName: ")
         self.inputField_1 = self.inputLayout
-        # self.classLayout = QHBoxLayout()
-        # self.classeCombobox = QtWidgets.QComboBox()
-        # self.classeCombobox.addItems(["Guerrier", "Mage", "Voleur", "Archer", "Assassin"])
-        # self.classeLabel = QLabel("Choose your class: ")
-        # self.classLayout.addWidget(self.classeLabel)
-        # self.classLayout.addWidget(self.classeCombobox)
-        # self.mainLayout.addLayout(self.classLayout)
 
         self.mainLayout.addStretch(1)
         self.messageLabel = setupLabel(self.mainLayout, "")
@@ -201,8 +195,7 @@ class MainWindow(QMainWindow):
                     character_data.addLayout(data_row)
                 
                 character_data.addSpacing(10)  # Add space between characters if multiple
-
-      
+                
             character_widget = QWidget()
             character_widget.setLayout(character_data)
             
@@ -228,6 +221,119 @@ class MainWindow(QMainWindow):
         back_button = self.buttonList[1]
         # Connect each button to its appropriate function
         back_button.clicked.connect(self.setupMainMenu)
+        createAcc_button.clicked.connect(self.setupCreateCharacterMenu)
+    
+    def setupCreateCharacterMenu(self):
+        """
+        Set up the create character menu.
+        """
+        clear_screen(self.mainLayout)
+
+        self.label = QLabel(f"Create your character {self.user} !")
+        self.label.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        self.label.setFont(QtGui.QFont("Arial", 15))
+        self.label.setStyleSheet("color: blue;")
+        self.mainLayout.addWidget(self.label)
+
+        self.inputFieldList = setupLineEdit(self.mainLayout, "Enter your character name: ")
+        self.inputField = self.inputFieldList
+        self.inputField.returnPressed.connect(lambda: self.on_input_submitted(self.inputField))
+
+        self.classLayout = QHBoxLayout()
+        self.classeCombobox = QtWidgets.QComboBox()
+        self.classeCombobox.addItems(["Assassin", "Archer", "Barbare", "Berserker", "Chasseur","Chevalier", "Démoniste", "Druide", 
+                                    "Enchanteresse", "Guerrier","Illusionniste", "Mage", "Moine", "Nécromancien", "Paladin","Prêtresse", "Rôdeur", "Sorcière", "Templier"])
+        self.classeLabel = QLabel("Choose your class: ")
+        self.classLayout.addWidget(self.classeLabel)
+        self.classLayout.addWidget(self.classeCombobox)
+        self.mainLayout.addLayout(self.classLayout)
+        
+        # Initialize attribute values
+        self.attributes = {
+            "Strength": 10,
+            "Agility": 10,
+            "Intelligence": 10,
+            "pv": 100,
+            "mana": 100
+        }
+        
+        # Create layouts for attributes with increase/decrease buttons
+        self.attributeLayouts = {}
+        for attr in self.attributes:
+            layout = QHBoxLayout()
+            
+            # Label showing attribute name and current value
+            label = QLabel(f"{attr}: {self.attributes[attr]}")
+            
+            # Decrease button
+            decreaseBtn = QPushButton("-")
+            decreaseBtn.setFixedSize(30, 30)
+            decreaseBtn.clicked.connect(lambda checked, a=attr: self.decreaseAttribute(a))
+            
+            # Increase button
+            increaseBtn = QPushButton("+")
+            increaseBtn.setFixedSize(30, 30)
+            increaseBtn.clicked.connect(lambda checked, a=attr: self.increaseAttribute(a))
+            
+            # Add widgets to layout
+            layout.addWidget(label)
+            layout.addStretch()
+            layout.addWidget(increaseBtn)
+            layout.addWidget(decreaseBtn)
+            
+            # Store references to the label for updating
+            self.attributeLayouts[attr] = {
+                "layout": layout,
+                "label": label
+            }
+            
+            # Add the attribute layout to main layout
+            self.mainLayout.addLayout(layout)
+        
+        self.mainLayout.addStretch(1)
+
+        self.buttonList = setupButtons(self.mainLayout, (200,50), "Create Character", "Back")
+        createAcc_button = self.buttonList[0]
+        back_button = self.buttonList[1]
+
+        # Connect each button to its appropriate function
+        back_button.clicked.connect(self.setupCharacterMenu)
+        createAcc_button.clicked.connect(self.createCharacter)
+
+
+    def increaseAttribute(self, attr):
+        """Increase the attribute value"""
+        if self.attributes[attr] < 200:
+            self.attributes[attr] += 1
+
+        self.attributeLayouts[attr]["label"].setText(f"{attr}: {self.attributes[attr]}")
+            
+
+    def decreaseAttribute(self, attr):
+        """Decrease the attribute value"""
+        if self.attributes[attr] > 0:
+            self.attributes[attr] -= 1
+        self.attributeLayouts[attr]["label"].setText(f"{attr}: {self.attributes[attr]}")
+
+    def createCharacter(self):
+        """Handle character creation"""
+        characterName = self.inputField.text()
+        classe = self.classeCombobox.currentText()
+        print("Character created successfully with name:", characterName,"and ID:", self.id)
+        print("Class:", classe)
+        for attr, value in self.attributes.items():
+            print(f"{attr}: {value}")
+        # if not characterName:
+        #     self.messageLabel.setStyleSheet("color: red;")
+        #     self.messageLabel.setText("Please fill in all fields.")
+        # else:
+        #     self.messageLabel.setStyleSheet("color: green;")
+        #     self.messageLabel.setText(f"Character {characterName} created successfully.")
+        #     query = "INSERT INTO `Character` (PlayerID, CharacterName, Class) VALUES (%s, %s, %s)"
+        #     self.cursor.execute(query, (self.id, characterName, classe))
+        #     self.connection.commit()
+        #     self.characterName = characterName
+        #     self.setupCharacterMenu()
     
     def selectCharacter(self, characterName):
         self.characterName = characterName
@@ -252,8 +358,8 @@ class MainWindow(QMainWindow):
                     self.setupMainMenu()
                 else:
                     self.messageLabel.setText(f"User {userName} not found.")
-                    inputField.clear()  # Clear the input field to allow retrying
-                    inputField.setFocus()  # Set focus back to the input field
+                    inputField.clear()
+                    inputField.setFocus()
         else:
             self.label.setText("Database connection failed.")
 

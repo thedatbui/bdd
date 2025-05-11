@@ -1,5 +1,6 @@
-from utils import *
-  
+from utils_loadFiles import *
+from src.db_utils.DataBase import DataBase
+
 def loadPlayerData(cursor, playerFile):
      """
      Load player data from a CSV file into the database.
@@ -383,11 +384,9 @@ def main():
     # questFile = loadXMLfile('data/quetes.xml')
 
     # Connect to the database
-    connection = connectToDatabase()
-    if connection is None:
-        print("Failed to connect to the database.")
-        return
-    cursor = connection.cursor()
+    dataBase = DataBase()
+    dataBase.connectToDatabase()
+    cursor = dataBase.getCursor()
 
     # Load player data to the database
     loadPlayerData(cursor, playerFile)
@@ -403,9 +402,7 @@ def main():
     #loadQuestData(cursor, questFile)
         
     # Fermer la connexion
-    cursor.close()
-    connection.commit()
-    connection.close()
+    dataBase.closeConnection()
 
 if __name__ == "__main__":
     main()
