@@ -126,6 +126,7 @@ class SetupMenu:
                 self.inputField_1.clear()
                 self.inputField_1.setFocus()
                 return
+            
             # Create a new Player object
             self.currentUser = Player(userName, None)
             # Insert the new player into the database
