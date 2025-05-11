@@ -229,7 +229,9 @@ class SetupMenu:
         # Fetch characters from database
         self.currentUser.getCharacterFromDatabase()
         self.characterList = self.currentUser.getCharacterList()
-        
+        for character in self.characterList:
+            print(character)
+
         # Create list widget
         self.characterListLayout = QHBoxLayout()
         self.character_list = QtWidgets.QListWidget()
@@ -443,7 +445,7 @@ class SetupMenu:
         #check if the character name already exists
         query = "SELECT * FROM `Character` WHERE CharacterName = %s"
         self.cursor.execute(query, (characterName,))
-        result = self.cursor.fetchone()
+        result = self.cursor.fetchall()
         if result:
             QMessageBox.warning(self.main_window, "Input Error", f"Character {characterName} already exists.")
             self.inputField.clear()

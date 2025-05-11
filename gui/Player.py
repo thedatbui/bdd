@@ -30,13 +30,19 @@ class Player():
     def getCharacterSelected(self):
         return self.characterSeleted
     
+    def isInCharacterList(self, character):
+        for char in self.characterList:
+            if char.getAttribute("name") == character.getAttribute("name"):
+                return True
+        return False
+    
     def addCharacter(self, character):
         if len(self.characterList) == 0:
             self.characterList.append(character)
         else:
-            for char in self.characterList:
-                if char.getAttribute("name") != character.getAttribute("name"):
-                    self.characterList.append(character)
+            if not self.isInCharacterList(character):
+                self.characterList.append(character)
+                    
                 
     
     def removeCharacter(self, character):

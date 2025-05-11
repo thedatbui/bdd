@@ -5,7 +5,7 @@ import sys
 from gui.Component import *
 from gui.utils import setMenuState
 from gui.MenuManager import SceneManager
-
+import loadFiles as loadFiles
 class MainWindow(QMainWindow):
     """
     Main application window.
@@ -28,6 +28,7 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
+    # loadFiles.main()
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
