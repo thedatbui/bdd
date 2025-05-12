@@ -60,10 +60,10 @@ CREATE TABLE NPC (
 CREATE TABLE Quest (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     QuestName VARCHAR(100),
-    Description TEXT,
+    Description VARCHAR(500),
     DifficultyLevel INT,
-    RewardXP INT,
-    RewardGold INT
+    RewardXP INT
+    
 );
 
 --  Objets récompensés par des quêtes (Définir quels objets sont donnés en récompense à la fin d'une quête.)
