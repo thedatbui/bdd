@@ -1,6 +1,3 @@
-import json
-import csv
-import xml.etree.ElementTree as ET
 from utils_loadFiles import *
 from src.db_utils.connectToDataBase import *
 
@@ -105,25 +102,6 @@ def loadObjectData(cursor, objectFile):
                 else:
                     print(f"Object {name} already exists with the same attributes. No update needed.")
              
-
-
-def replace_underscores_with_spaces(text):
-    """
-    Replace underscores in a string with spaces.
-    """
-    final_text = ""
-    alist = ['d', 'D', 'l', 'L']
-    if isinstance(text, str):
-        text = text.split('_')
-        for i in text:
-            if len(i) == 1 and i in alist:
-                final_text += i + "'"
-            else:
-                final_text += i + " "
-    return final_text.strip()
- 
-
-
 def loadMonsterData(cursor, root):
     """
     Load monster data from an XML file into the database, including drops.
@@ -311,39 +289,6 @@ def load_spell_data(cursor, spells):
             )
             print(f"Added spell: {Name}")
 
-def insert_player(cursor, player):
-    """
-    character: dict avec les clés
-      - CharacterID (int)  
-      - PlayerID    (int)
-      - ClassID     (int)
-      - Name        (str)
-      - Strength    (int)
-      - Agility     (int)
-      - Intelligence(int)
-      - HitPoints   (int)
-      - Mana        (int)
-    """
-    # Validation minimale
-    required = ('ID','Name','Level','XP','Money','SlotsInventaire')
-    if any(k not in player or player[k] is None for k in required):
-        raise ValueError("Données incomplètes pour le personnage : " + ", ".join(required))
-    
-    sql = """
-      INSERT INTO `Character`
-        (CharacterID, PlayerID, ClassID, Name, Strength, Agility, Intelligence, HitPoints, Mana)
-      VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-    """
-    params = (
-        int(player['ID']),
-        player['Name'].strip(),
-        int(player['Level']),
-        int(player['XP']),
-        int(player['Money']),
-        int(player['SlotsInventaire']),
-    )
-    cursor.execute(sql, params)
-
 def to_int(value):
     """
     Convertit une valeur en entier. Si la conversion échoue, retourne 0.
@@ -406,7 +351,7 @@ def loadCharacterData(cursor, characters):
         # Insertion
         try:
             cursor.execute("""
-                INSERT INTO `Character` (PlayerID, CharacterName, Class, Strength, Agility, Intelligence, pv, mana)
+                INSERT INTO CharacterTable (PlayerID, CharacterName, Class, Strength, Agility, Intelligence, pv, mana)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, (player_id, char_name, classe, force, agi, intel, hp, mana))
             print(f"✅ Ajouté : {char_name} ({classe}) → joueur {username}")
@@ -499,7 +444,7 @@ def main():
 
     # Connect to the database
     cursor = get_cursor()
-
+    
     # Load player data to the database
     loadPlayerData(cursor, playerFile)
 
@@ -514,7 +459,6 @@ def main():
     # Load NPC data
     loadNpcData(cursor, NPCs)
     
-
     loadQuestData(cursor, questFile)
         
     # Fermer la connexion
