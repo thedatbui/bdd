@@ -77,3 +77,52 @@ def extract_property_value(property_str):
             return property_str
     else:
         return property[0].strip()
+
+
+def insert_player(cursor, player):
+    """
+    character: dict avec les clés
+      - CharacterID (int)  
+      - PlayerID    (int)
+      - ClassID     (int)
+      - Name        (str)
+      - Strength    (int)
+      - Agility     (int)
+      - Intelligence(int)
+      - HitPoints   (int)
+      - Mana        (int)
+    """
+    # Validation minimale
+    required = ('ID','Name','Level','XP','Money','SlotsInventaire')
+    if any(k not in player or player[k] is None for k in required):
+        raise ValueError("Données incomplètes pour le personnage : " + ", ".join(required))
+    
+    sql = """
+      INSERT INTO `Character`
+        (CharacterID, PlayerID, ClassID, Name, Strength, Agility, Intelligence, HitPoints, Mana)
+      VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+    params = (
+        int(player['ID']),
+        player['Name'].strip(),
+        int(player['Level']),
+        int(player['XP']),
+        int(player['Money']),
+        int(player['SlotsInventaire']),
+    )
+    cursor.execute(sql, params)
+
+def replace_underscores_with_spaces(text):
+    """
+    Replace underscores in a string with spaces.
+    """
+    final_text = ""
+    alist = ['d', 'D', 'l', 'L']
+    if isinstance(text, str):
+        text = text.split('_')
+        for i in text:
+            if len(i) == 1 and i in alist:
+                final_text += i + "'"
+            else:
+                final_text += i + " "
+    return final_text.strip()

@@ -1,10 +1,10 @@
 import xml.etree.ElementTree as ET
-import mysql.connector
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtWidgets import QMainWindow, QApplication, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QPushButton, QScrollArea, QLineEdit, QMessageBox, QMenu
 from PyQt5.QtCore import Qt
 
 currentMenuState = 0
+currentUser = None
 MenuState = {
     "IntroMenu": 0,
     "LogIn": 1,
@@ -12,13 +12,25 @@ MenuState = {
     "Main Menu": 3,
     "Character": 4,
     "Inventory": 5,
-    "Quest": 6,
-    "Npc": 7,
-    "Bestiary": 8,
-    "Exit": 9
+    "Npc": 6,
+    "Bestiary": 7,
+    "Profile": 8,
 }
 
+def getCurrentUser():
+    """
+    Get the current user.
+    """
+    return currentUser
 
+def setCurrentUser(user):
+    """
+    Set the current user.
+    """
+    global currentUser
+    currentUser = user
+    print(f"Current user set to: {currentUser.getName() if currentUser else 'None'}")
+                                  
 def getMenuState():
     """
     Get the current menu state.

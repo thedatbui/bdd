@@ -9,11 +9,11 @@ CREATE TABLE Player (
     PlayerLevel INT DEFAULT 1,
     ExperiencePoints INT DEFAULT 0,
     WalletCredits INT DEFAULT 0,
-    InventorySlot INT DEFAULT 0
+    InventorySlot INT DEFAULT 1
 );
 
 --  Personnages créés par les joueurs
-CREATE TABLE `Character` (
+CREATE TABLE CharacterTable (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     PlayerID INT,
     CharacterName VARCHAR(50),
@@ -107,7 +107,6 @@ CREATE TABLE NPCQuest (
 
 -- PNJ ↔ Objets
 CREATE TABLE NPCInventory (
-    ID INT AUTO_INCREMENT PRIMARY KEY,  -- Identifiant unique
     NPCID INT,
     ObjectName VARCHAR(100),
     Quantity INT DEFAULT 1,
