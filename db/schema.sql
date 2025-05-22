@@ -40,11 +40,13 @@ CREATE TABLE ObjectTest (
 --  Inventaire des joueurs
 CREATE TABLE Inventory (
     PlayerID INT,
+    CharacterID INT,
     ObjectName VARCHAR(100),
     MaxCapacity INT DEFAULT 1,
     Quantity INT DEFAULT 1,
-    PRIMARY KEY (PlayerID, ObjectName),
+    PRIMARY KEY (PlayerID, CharacterID, ObjectName),
     FOREIGN KEY (PlayerID) REFERENCES Player(ID),
+    FOREIGN KEY (CharacterID) REFERENCES CharacterTable(ID),
     FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName)
 );
 

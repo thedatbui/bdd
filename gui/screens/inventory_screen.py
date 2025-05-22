@@ -38,12 +38,13 @@ class InventoryMenuScreen:
         clear_screen(self.main_layout)
 
         self.currentUser = self.main_window.current_user
+        self.character = self.currentUser.getCharacterSelected()
         self.label = create_title_label("Inventory Menu")
         self.main_layout.addWidget(self.label)
         
         self.subLayout = QHBoxLayout()
         self.itemList = QtWidgets.QListWidget()
-        result = self.inventory_service.get_inventory_items(self.currentUser.getId())
+        result = self.inventory_service.get_inventory_items(self.character.getAttribute("Id"))
         for row in result:
             item = QtWidgets.QListWidgetItem(row)
             self.itemList.addItem(item)

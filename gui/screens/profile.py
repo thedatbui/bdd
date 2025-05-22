@@ -38,7 +38,7 @@ class ProfileScreen:
         self.moneyLabel = self.testLayout[2]
         self.moneyLabel.setText(f"Money: {self.currentUser.getMoney()}")
         self.characterLabel = self.testLayout[3]
-        self.characterLabel.setText(f"Character: {self.currentUser.getCharacterSelected()}")
+        self.characterLabel.setText(f"Character: {self.currentUser.getCharacterSelected().name}")
         self.main_layout.addStretch(1)
 
         # Add buttons for profile actions

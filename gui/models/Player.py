@@ -13,7 +13,7 @@ class Player():
         self.inventorySlot = inventorySlot
         self.characterSeleted = None
         self.npc = None
-        self.character = Character(None, None, None, None, None, None, None)
+        self.character = Character(None, None, None, None, None, None, None, None)
         self.characterList = []
         self.inventory = InventoryService()
         self.characterService = CharacterService()
@@ -101,8 +101,7 @@ class Player():
             return
         # If not, insert the item into the inventory
 
-        self.inventory.add_item(self.Id, item.getName(), self.inventorySlot)
-        self.inventory.commit()
+        self.inventory.add_item(self.Id,self.characterSeleted.getAttribute("Id"), item.getName(), self.inventorySlot)
         print("Item added to inventory.")
     
 

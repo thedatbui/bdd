@@ -1,5 +1,6 @@
 class Character:
-    def __init__(self, name, classe, strength, intelligence, agility, pv, mana):
+    def __init__(self, Id, name, classe, strength, intelligence, agility, pv, mana):
+        self.Id = Id
         self.name = name
         self.classe = classe
         self.strength = strength
@@ -9,10 +10,12 @@ class Character:
         self.mana = mana
     
     def __str__(self):
-        return f"Character({self.name}, {self.classe}, {self.strength}, {self.intelligence}, {self.agility}, {self.pv}, {self.mana})"
+        return f"Character({self.Id} {self.name}, {self.classe}, {self.strength}, {self.intelligence}, {self.agility}, {self.pv}, {self.mana})"
     
     def setAttribute(self, attribute, value):
-        if attribute == "name":
+        if attribute == "Id":
+            self.Id = value
+        elif attribute == "name":
             self.name = value
         elif attribute == "classe":
             self.classe = value
@@ -30,6 +33,8 @@ class Character:
             raise ValueError(f"Unknown attribute: {attribute}")
         
     def getAttribute(self, attribute):
+        if attribute == "Id":
+            return self.Id
         if attribute == "name":
             return self.name
         elif attribute == "classe":

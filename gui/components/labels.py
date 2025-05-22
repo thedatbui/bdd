@@ -23,7 +23,9 @@ def create_label(text, font_size=15, color="blue", alignment=None):
     label = QLabel(text)
     if alignment:
         label.setAlignment(alignment)
-    
+    else:
+        label.setAlignment(Qt.AlignTop | Qt.AlignCenter)
+        
     label.setFont(QtGui.QFont("Arial", font_size))
     if color:
         label.setStyleSheet(f"color: {color};")

@@ -28,11 +28,12 @@ class CharacterService:
         for result in results:
             # Assuming: ID, PlayerID, CharacterName, Class, Strength, Agility, Intelligence, pv, mana
             character = Character(
+                Id=result[0],
                 name=result[2],
                 classe=result[3],
                 strength=result[4],
-                agility=result[5],
                 intelligence=result[6],
+                agility=result[5],
                 pv=result[7],
                 mana=result[8]
             )
@@ -94,7 +95,7 @@ class CharacterService:
         
         return True, f"Character {character.name} created successfully."
     
-    def delete_character(self, character_name, player_id):
+    def delete_character(self, characterId, player_id):
         """
         Delete a character.
         
@@ -105,11 +106,22 @@ class CharacterService:
         Returns:
             (bool, str): Tuple of (success, message)
         """
-        query = "DELETE FROM CharacterTable WHERE CharacterName = %s AND PlayerID = %s"
-        if not self.db_service.execute_query(query, (character_name, player_id)):
-            return False, f"Failed to delete character: {character_name}"
+        # delete related items
+        query = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_NAME = 'CharacterTable';"
+        self.db_service.execute_query(query)
+        results = self.db_service.fetch_all()
+        for result in results:
+            table_name = result[0]
+            print(table_name)
+            query = f"DELETE FROM {table_name} WHERE CharacterID = %s"
+            if not self.db_service.execute_query(query, (characterId,)):
+                return False, f"Failed to delete related data from {table_name}."
+            
+        query = "DELETE FROM CharacterTable WHERE ID = %s AND PlayerID = %s"
+        if not self.db_service.execute_query(query, (characterId, player_id)):
+            return False, f"Failed to delete character: {characterId}"
         
         if not self.db_service.commit():
             return False, "Failed to commit character deletion."
         
-        return True, f"Character {character_name} deleted successfully."
+        return True, f"Character {characterId} deleted successfully."

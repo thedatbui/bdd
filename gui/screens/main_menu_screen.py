@@ -37,7 +37,7 @@ class MainMenuScreen:
         self.moneyLabel = self.testLayout[1]
         self.moneyLabel.setText(f"Money: {self.currentUser.getMoney()}")
         self.characterLabel = self.testLayout[2]
-        self.characterLabel.setText(f"Character: {self.currentUser.getCharacterSelected()}")
+        self.characterLabel.setText(f"Character: {self.currentUser.getCharacterSelected().getAttribute('name') if self.currentUser.getCharacterSelected() else 'None'}")
         self.main_layout.addStretch(1)
 
         self.buttonLayout = add_vertical_buttons(self.main_layout, (200, 50),"Character", "Inventory", "NPC", "Monster", "Profile")
@@ -51,6 +51,16 @@ class MainMenuScreen:
         self.main_layout.addStretch(1)
         #Connect each button to its appropriate function
         character_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Character"))
+        if self.currentUser.getCharacterSelected() is None:
+            inventory_button.setEnabled(False)
+            inventory_button.setStyleSheet("background-color: gray;")
+            npc_button.setEnabled(False)
+            npc_button.setStyleSheet("background-color: gray;")
+        else:
+            inventory_button.setEnabled(True)
+            inventory_button.setStyleSheet("background-color: lightblue;")
+            npc_button.setEnabled(True)
+            npc_button.setStyleSheet("background-color: lightblue;")
         inventory_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Inventory"))
         npc_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Npc"))
         # monster_button.clicked.connect(self.setupMonsterMenu)

@@ -102,7 +102,7 @@ class CharacterMenuScreen:
                 try:
                     # Remove from list
                     self.character_list.takeItem(current_row)
-                    self.character_service.delete_character(character.name, self.currentUser.getId())
+                    self.character_service.delete_character(character.Id, self.currentUser.getId())
                     self.currentUser.setCharacterSelected(None)
                     QMessageBox.information(
                         self.main_window,
@@ -123,7 +123,7 @@ class CharacterMenuScreen:
         current_row = self.character_list.currentRow()
         if current_row >= 0:
             character = self.characterList[current_row]
-            self.currentUser.setCharacterSelected(character.name)
+            self.currentUser.setCharacterSelected(character)
             
             QMessageBox.information(
                 self.main_window,
@@ -245,7 +245,7 @@ class CharacterMenuScreen:
             return
 
         # Create a new Character object
-        newCharacter = Character(characterName, classe, self.attributes["Strength"], self.attributes["Agility"], 
+        newCharacter = Character(None, characterName, classe, self.attributes["Strength"], self.attributes["Agility"], 
                                  self.attributes["Intelligence"], self.attributes["pv"], self.attributes["mana"])
 
         #Insert the new character into the database

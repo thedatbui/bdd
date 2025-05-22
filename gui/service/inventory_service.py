@@ -8,7 +8,7 @@ class InventoryService:
         """Initialize the inventory service."""
         self.db_service = DatabaseService()
     
-    def get_inventory_items(self, player_id):
+    def get_inventory_items(self, characterId):
         """
         Get all items in the inventory for a player.
         
@@ -18,16 +18,32 @@ class InventoryService:
         Returns:
             list: List of Object objects
         """
-        query = "SELECT * FROM Inventory WHERE PlayerID = %s"
-        if not self.db_service.execute_query(query, (player_id,)):
+        query = "SELECT * FROM Inventory WHERE characterID = %s"
+        if not self.db_service.execute_query(query, (characterId,)):
             return []
         
         results = self.db_service.fetch_all()
         items = []
         
         for result in results:
-            items.append(result[1])
+            print(result)
+            items.append(result[2])
         return items
+    
+    def update_attribute(self, player_id, attribute, value):
+        """
+        Update a specific attribute of a player.
+        
+        Args:
+            player_id (int): The player's ID
+            attribute (str): The attribute to update
+            value (int): The new value
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        query = f"UPDATE Inventory SET {attribute} = %s WHERE PlayerID = %s"
+        return self.db_service.execute_query(query, (value, player_id))
     
     def get_item_details(self, item_name):
         """
@@ -49,7 +65,7 @@ class InventoryService:
         
         return None
 
-    def add_item(self, player_id, item_name, item_slot):
+    def add_item(self, player_id, characterId, item_name, item_slot):
         """
         Add an item to the inventory.
         
@@ -60,8 +76,8 @@ class InventoryService:
         Returns:
             bool: True if successful, False otherwise
         """
-        query = "INSERT INTO Inventory (PlayerID, ObjectName, MaxCapacity) VALUES (%s, %s, %s)"
-        return self.db_service.execute_query(query, (player_id, item_name, item_slot))
+        query = "INSERT INTO Inventory (PlayerID, CharacterID, ObjectName, MaxCapacity) VALUES (%s, %s, %s, %s)"
+        return self.db_service.execute_query(query, (player_id, characterId , item_name, item_slot))
     
     def delete_item(self, player_id, item_name):
         """
@@ -75,21 +91,6 @@ class InventoryService:
         """
         query = "DELETE FROM Inventory WHERE PlayerID = %s AND ObjectName = %s"
         return self.db_service.execute_query(query, (player_id, item_name))
-    
-    def update_attribute(self, player_id, attribute, value):
-        """
-        Update a specific attribute of a player.
-        
-        Args:
-            player_id (int): The player's ID
-            attribute (str): The attribute to update
-            value (int): The new value
-            
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        query = f"UPDATE Player SET {attribute} = %s WHERE PlayerID = %s"
-        return self.db_service.execute_query(query, (value, player_id))
     
     def check_existing_item(self, player_id, item_name):
         """

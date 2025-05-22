@@ -6,6 +6,7 @@ from gui.components.labels import create_title_label, create_label
 from gui.components.inputs import add_labeled_input
 from gui.service.player_service import *
 from gui.service.db_service import *
+from gui.service.npc_service import *
 from gui.utils import *
 from gui.models.Npc import *
 from gui.models.Object import *
@@ -26,6 +27,7 @@ class NpcScreen:
         self.scene_manager = scene_manager
         self.main_layout = main_window.mainLayout
         self.player_service = PlayerService()
+        self.npc_service = NpcService()
         self.db = DatabaseService()
     
     def setupNpcMenu(self):
@@ -35,32 +37,22 @@ class NpcScreen:
         clear_screen(self.main_layout)
 
         self.currentUser = self.main_window.current_user
-        self.label = QLabel(f"NPC Menu")
-        self.label.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
-        self.label.setFont(QtGui.QFont("Arial", 15))
-        self.label.setStyleSheet("color: blue;")
+        self.character = self.currentUser.getCharacterSelected()
+        self.label = create_title_label("NPC Menu")
         self.main_layout.addWidget(self.label)
 
-        self.label = QLabel(f"Who would you like to talk to?")
-        self.label.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
-        self.label.setFont(QtGui.QFont("Arial", 15))
-        self.label.setStyleSheet("color: blue;")
+        self.label = create_label("Who would you like to talk to?")
         self.main_layout.addWidget(self.label)
         
         self.npcLayout = QtWidgets.QListWidget()
         self.main_layout.addWidget(self.npcLayout)
 
-        self.npcList = []
-        self.db.execute_query("SELECT * FROM NPC;")
-        result = self.db.fetch_all()
-        if result:
-            for row in result:
-                item = QtWidgets.QListWidgetItem(row[1])
-                self.npcList.append(Npc(row[0], row[1], row[2], row[3]))
-                self.npcLayout.addItem(item)
+        self.npcList = self.npc_service.get_npc()
+        for npc in self.npcList:
+            item = QtWidgets.QListWidgetItem(npc.getName())
+            self.npcLayout.addItem(item)
 
         self.npcLayout.doubleClicked.connect(self.on_npc_selected)
-        
         self.buttonList = setupButtons(self.main_layout, (200,50), "Back")
         back_button = self.buttonList
         back_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Main Menu"))
@@ -82,16 +74,10 @@ class NpcScreen:
         """
         clear_screen(self.main_layout)
       
-        self.label = QLabel(f"{dialogue}")
-        self.label.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
-        self.label.setFont(QtGui.QFont("Arial", 15))
-        self.label.setStyleSheet("color: blue;")
+        self.label = create_title_label(f"{dialogue}", 12)
         self.main_layout.addWidget(self.label)
 
-        self.label = QLabel(f"Money: {self.currentUser.getMoney()}")
-        self.label.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
-        self.label.setFont(QtGui.QFont("Arial", 15))
-        self.label.setStyleSheet("color: blue;")
+        self.label = create_label(f"Money: {self.currentUser.getMoney()}")
         self.main_layout.addWidget(self.label)
 
         self.subLayout = QHBoxLayout()
@@ -136,8 +122,8 @@ class NpcScreen:
             item_quantity = int(item_quantity.split(" ")[0])
             
             # check if the current player has enough space in the inventory
-            query = "SELECT COUNT(*) FROM Inventory WHERE PlayerID = %s"
-            self.db.execute_query(query, (self.currentUser.getId(),))
+            query = "SELECT COUNT(*) FROM Inventory WHERE characterID = %s"
+            self.db.execute_query(query, (self.character.getAttribute("Id"),))
             inventory_count = self.db.fetch_one()[0]
 
             if inventory_count < self.currentUser.getInventorySlot():

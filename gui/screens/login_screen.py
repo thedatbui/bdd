@@ -2,8 +2,9 @@ from PyQt5 import QtGui
 from PyQt5.QtWidgets import QLabel, QMessageBox
 from PyQt5.QtCore import Qt
 
-from gui.components.labels import create_title_label, create_label
-from gui.components.inputs import add_labeled_input
+from gui.components.labels import *
+from gui.components.inputs import *
+from gui.components.butttons import *
 from gui.service.player_service import PlayerService
 from gui.service.db_service import DatabaseService
 from gui.models.Player import Player
@@ -94,12 +95,11 @@ class LoginScreen:
         self.main_layout.addWidget(self.inputField)
 
         self.main_layout.addStretch(1)
-        self.messageLabel = setupLabel(self.main_layout, "")
+        self.messageLabel = add_horizontal_labels(self.main_layout, "Please enter a username to create an account")
         self.messageLabel.setAlignment(Qt.AlignCenter)
-        self.messageLabel.setFont(QtGui.QFont("Arial", 14))
         self.main_layout.addStretch(1)
 
-        self.buttonList  = setupButtons(self.main_layout, (200,50), "Create Account", "Back")
+        self.buttonList  = add_horizontal_buttons(self.main_layout, "Create Account", "Back")
         create_account_button = self.buttonList[0]
         back_button = self.buttonList[1]
         # Connect each button to its appropriate function
@@ -115,9 +115,7 @@ class LoginScreen:
            
         if userName:
             #check if the username already exists
-            query = "SELECT * FROM Player WHERE UserName = %s"
-            self.db.execute_query(query, (userName,))
-            result = self.db.fetch_one()
+            result = self.player_service.check_existing_username(userName)
             if result:
                 QMessageBox.warning(self.main_window, "Input Error", f"Username {userName} already exists.")
                 self.inputField.clear()
@@ -127,9 +125,7 @@ class LoginScreen:
             # Create a new Player object
             self.currentUser = Player(userName, None, None, None, None)
             # Insert the new player into the database
-            query = "INSERT INTO Player (UserName) VALUES (%s)"
-            self.db.execute_query(query, (userName,))
-            self.db.commit()
+            self.player_service.insert_player(self.currentUser)
 
             response = QMessageBox.information(self.main_window, "Success", f"Account {userName} created successfully.")
             if response == QMessageBox.Ok:
