@@ -1,30 +1,41 @@
-import json
 import csv
+import json
 import xml.etree.ElementTree as ET
 
 def loadCSVfile(filePath):
     """
     Load a CSV file and return its contents as a list of dictionaries.
     Each dictionary represents a row in the CSV file, with the keys being the column headers.
+    Raises an exception if the file can't be read or parsed.
     """
-  
-    with open(filePath, mode='r', encoding='utf-8') as csvfile:
-        reader = csv.DictReader(csvfile)
-        return [row for row in reader]
+    try:
+        with open(filePath, mode='r', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile)
+            return [row for row in reader]
+    except Exception as e:
+        raise RuntimeError(f"Erreur lors du chargement du fichier CSV '{filePath}' : {e}")
 
 def loadJSONfile(filePath):
     """
     Load a JSON file and return its contents as a dictionary.
+    Raises an exception if the file can't be read or parsed.
     """
-    with open(filePath, mode='r', encoding='utf-8') as jsonfile:
-        return json.load(jsonfile)
+    try:
+        with open(filePath, mode='r', encoding='utf-8') as jsonfile:
+            return json.load(jsonfile)
+    except Exception as e:
+        raise RuntimeError(f"Erreur lors du chargement du fichier JSON '{filePath}' : {e}")
 
 def loadXMLfile(filePath):
     """
     Load an XML file and return its root element.
+    Raises an exception if the file can't be read or parsed.
     """
-    tree = ET.parse(filePath)
-    return tree.getroot()
+    try:
+        tree = ET.parse(filePath)
+        return tree.getroot()
+    except Exception as e:
+        raise RuntimeError(f"Erreur lors du chargement du fichier XML '{filePath}' : {e}")
 
     
 def checkInteger(value):

@@ -42,6 +42,7 @@ CREATE TABLE Inventory (
     PlayerID INT,
     ObjectName VARCHAR(100),
     MaxCapacity INT DEFAULT 1,
+    Quantity INT DEFAULT 1,
     PRIMARY KEY (PlayerID, ObjectName),
     FOREIGN KEY (PlayerID) REFERENCES Player(ID),
     FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName)
