@@ -2,10 +2,10 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtWidgets import QMainWindow, QApplication, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QPushButton, QScrollArea, QLineEdit, QMessageBox
 from PyQt5.QtCore import Qt
 import sys
-from gui.Component import *
 from gui.utils import setMenuState
 from gui.MenuManager import SceneManager
 import loadFiles as loadFiles
+from gui.models.Player import Player
 
 class MainWindow(QMainWindow):
     """
@@ -21,12 +21,14 @@ class MainWindow(QMainWindow):
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.central_widget.setLayout(self.mainLayout)
-    
+
+        self.current_user = Player(None, None, None, None, None)
         setMenuState("IntroMenu")
         self.sceneManager = SceneManager(self)
         self.sceneManager.set_scene()
         print("Scene set up successfully")
 
+    
 
 if __name__ == "__main__":
     # loadFiles.main()

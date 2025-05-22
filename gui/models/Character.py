@@ -1,6 +1,3 @@
-from gui.utils import *
-from gui.Component import TitleComponent, ButtonComponent
-
 class Character:
     def __init__(self, name, classe, strength, intelligence, agility, pv, mana):
         self.name = name
