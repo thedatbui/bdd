@@ -43,7 +43,6 @@ CREATE TABLE Inventory (
     CharacterID INT,
     ObjectName VARCHAR(100),
     MaxCapacity INT DEFAULT 1,
-    Quantity INT DEFAULT 1,
     PRIMARY KEY (PlayerID, CharacterID, ObjectName),
     FOREIGN KEY (PlayerID) REFERENCES Player(ID),
     FOREIGN KEY (CharacterID) REFERENCES CharacterTable(ID),
