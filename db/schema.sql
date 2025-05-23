@@ -23,7 +23,7 @@ CREATE TABLE CharacterTable (
     Intelligence INT,
     pv INT,
     mana INT,
-    FOREIGN KEY (PlayerID) REFERENCES Player(ID)
+    FOREIGN KEY (PlayerID) REFERENCES Player(ID) ON DELETE CASCADE
 );
 
 -- Objets
@@ -42,11 +42,11 @@ CREATE TABLE Inventory (
     PlayerID INT,
     CharacterID INT,
     ObjectName VARCHAR(100),
-    Quantity INT DEFAULT 1,
     MaxCapacity INT DEFAULT 1,
+    Quantity INT DEFAULT 1,
     PRIMARY KEY (PlayerID, CharacterID, ObjectName),
-    FOREIGN KEY (PlayerID) REFERENCES Player(ID),
-    FOREIGN KEY (CharacterID) REFERENCES CharacterTable(ID),
+    FOREIGN KEY (PlayerID) REFERENCES Player(ID) ON DELETE CASCADE,
+    FOREIGN KEY (CharacterID) REFERENCES CharacterTable(ID) ON DELETE CASCADE,
     FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName)
 );
 
@@ -56,7 +56,6 @@ CREATE TABLE NPC (
     NpcName VARCHAR(50),
     Dialogue TEXT,
     Type VARCHAR(50)
-
 );
 
 --  Quêtes disponibles dans le jeu.
@@ -66,16 +65,15 @@ CREATE TABLE Quest (
     Description VARCHAR(500),
     DifficultyLevel INT,
     RewardXP INT
-    
 );
 
---  Objets récompensés par des quêtes (Définir quels objets sont donnés en récompense à la fin d'une quête.)
+--  Objets récompensés par des quêtes
 CREATE TABLE Quest_Objects (
     QuestID INT,
     ObjectName VARCHAR(100),
     Quantity INT,
     PRIMARY KEY (QuestID, ObjectName),
-    FOREIGN KEY (QuestID) REFERENCES Quest(ID),
+    FOREIGN KEY (QuestID) REFERENCES Quest(ID) ON DELETE CASCADE,
     FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName)
 );
 
@@ -96,7 +94,7 @@ CREATE TABLE Rewards (
     DropRate INT,
     Quantity INT,
     PRIMARY KEY (MonsterID, ObjectName),
-    FOREIGN KEY (MonsterID) REFERENCES Bestiary(ID),
+    FOREIGN KEY (MonsterID) REFERENCES Bestiary(ID) ON DELETE CASCADE,
     FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName)
 );
 
@@ -105,7 +103,7 @@ CREATE TABLE NPCQuest (
     NPCID INT,
     QuestName VARCHAR(100),
     PRIMARY KEY (NPCID, QuestName),
-    FOREIGN KEY (NPCID) REFERENCES NPC(ID)
+    FOREIGN KEY (NPCID) REFERENCES NPC(ID) ON DELETE CASCADE
 );
 
 -- PNJ ↔ Objets
@@ -113,6 +111,6 @@ CREATE TABLE NPCInventory (
     NPCID INT,
     ObjectName VARCHAR(100),
     Quantity INT DEFAULT 1,
-    FOREIGN KEY (NPCID) REFERENCES NPC(ID),
+    FOREIGN KEY (NPCID) REFERENCES NPC(ID) ON DELETE CASCADE,
     FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName)
 );
