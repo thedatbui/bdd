@@ -45,6 +45,7 @@ class InventoryMenuScreen:
         self.subLayout = QHBoxLayout()
         self.itemList = QtWidgets.QListWidget()
         result = self.inventory_service.get_inventory_items(self.character.getAttribute("Id"))
+
         for row in result:
             item = QtWidgets.QListWidgetItem(row)
             self.itemList.addItem(item)
@@ -70,15 +71,35 @@ class InventoryMenuScreen:
         if current:
             item_name = self.itemList.currentItem().text()
             result = self.inventory_service.get_item_details(item_name)
-            object_details = f"""Object Details:
+            current_count = self.inventory_service.get_item_quantity(self.character.getAttribute("Id"), item_name)
+            self.object_details = f"""Object Details:
             Name: {result.getName()}
             Type: {result.getType()}
             Strength: {result.getStrength()}
             Defence: {result.getDefence()}
             Effects: {result.getEffects()}
-            Price: {result.getPrice()}"""
-            self.label.setText(object_details)
+            Price: {result.getPrice()}
+            Quantity: {current_count}
+            """
+            self.label.setText(self.object_details)
     
+    def update_item_details(self, item_name):
+        """
+        Update the item details when an item is selected in the list.
+        """
+        result = self.inventory_service.get_item_details(item_name)
+        current_count = self.inventory_service.get_item_quantity(self.character.getAttribute("Id"), item_name)
+        self.object_details = f"""Object Details:
+        Name: {result.getName()}
+        Type: {result.getType()}
+        Strength: {result.getStrength()}
+        Defence: {result.getDefence()}
+        Effects: {result.getEffects()}
+        Price: {result.getPrice()}
+        Quantity: {current_count}
+        """
+        self.label.setText(self.object_details)
+
     def show_context_menu(self, position):
         """
         Show the context menu when right-clicking on an item in the list.
@@ -95,9 +116,16 @@ class InventoryMenuScreen:
         Delete the selected item from the inventory.
         """
         current_row = self.itemList.currentRow()
+        item_name = self.itemList.item(current_row).text()
+        current_count = self.inventory_service.get_item_quantity(self.character.getAttribute("Id"), self.itemList.item(current_row).text())
+        print(current_count)
         if current_row >= 0:
-            item_name = self.itemList.item(current_row).text()
-            self.inventory_service.delete_item(self.currentUser.getId(), item_name)
-            self.itemList.takeItem(current_row)
-            QMessageBox.information(self.main_window, "Success", f"{item_name} has been deleted from your inventory.")
-            self.db.commit()
+            if current_count > 1:
+                print("Deleting item")
+                self.inventory_service.update_quantity(self.character.getAttribute("Id"), item_name, current_count - 1)
+                self.update_item_details(item_name)
+            else:
+                self.inventory_service.delete_item(self.currentUser.getId(), item_name)
+                self.itemList.takeItem(current_row)
+                QMessageBox.information(self.main_window, "Success", f"{item_name} has been deleted from your inventory.")
+        self.db.commit()

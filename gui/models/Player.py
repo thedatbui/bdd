@@ -95,13 +95,13 @@ class Player():
     def addItemToInventory(self, item):
         self.inventory.update_attribute(self.Id, "MaxCapacity", self.inventorySlot)
         # Check if the item is already in the inventor
-        result = self.inventory.check_existing_item(self.Id, item.getName())
-        if result:
-            print("Item already exists in the inventory.")
+        result, quantity = self.inventory.check_existing_item(self.Id, item.getName())
+        if result and quantity > 0:
+            self.inventory.update_quantity(self.characterSeleted.getAttribute("Id"), item.getName(), quantity + 1)
             return
+        
         # If not, insert the item into the inventory
-
-        self.inventory.add_item(self.Id,self.characterSeleted.getAttribute("Id"), item.getName(), self.inventorySlot)
+        self.inventory.add_item(self.Id, self.characterSeleted.getAttribute("Id"), item.getName(), self.inventorySlot)
         print("Item added to inventory.")
     
 

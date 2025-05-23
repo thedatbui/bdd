@@ -7,9 +7,6 @@ class Object:
         self.effects = effects
         self.price = price
 
-    def __str__(self):
-        return f"Object({self.name}, {self.type_}, {self.strength}, {self.defence}, {self.effects}, {self.price})"
-
     def getName(self):
         return self.name
     

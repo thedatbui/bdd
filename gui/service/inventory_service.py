@@ -108,5 +108,43 @@ class InventoryService:
             return False
         
         result = self.db_service.fetch_one()
-        return result is not None
+        if result:
+            return True, result[3]
+        return False, None
+    
+    def get_item_quantity(self, character_id, item_name):
+        """
+        Get the quantity of an item in the inventory.
+        
+        Args:
+            player_id (int): The player's ID
+            item_name (str): The item's name
+            
+        Returns:
+            int: The quantity of the item
+        """
+        query = "SELECT Quantity FROM Inventory WHERE CharacterID = %s AND ObjectName = %s"
+        if not self.db_service.execute_query(query, (character_id, item_name)):
+            return 0
+        
+        result = self.db_service.fetch_one()
+        if result:
+            return result[0]
+        
+        return 0
+
+    def update_quantity(self, characterID, item_name, quantity):
+        """
+        Update the quantity of an item in the inventory.
+        
+        Args:
+            player_id (int): The player's ID
+            item_name (str): The item's name
+            quantity (int): The new quantity
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        query = "UPDATE Inventory SET Quantity = %s WHERE CharacterID = %s AND ObjectName = %s"
+        return self.db_service.execute_query(query, (quantity, characterID, item_name))
     
