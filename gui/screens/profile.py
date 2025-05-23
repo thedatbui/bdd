@@ -30,6 +30,7 @@ class ProfileScreen:
         self.label = create_title_label(f"Profile")
         self.main_layout.addWidget(self.label)
 
+        self.main_layout.addStretch(1)
         self.testLayout = add_vertical_labels(self.main_layout, "name: ", "ID: ", "Money: ", "Character: ", "Quest: ", "Beast: ")
         self.nameLabel = self.testLayout[0]
         self.nameLabel.setText(f"Name: {self.currentUser.getName()}")
@@ -38,7 +39,7 @@ class ProfileScreen:
         self.moneyLabel = self.testLayout[2]
         self.moneyLabel.setText(f"Money: {self.currentUser.getMoney()}")
         self.characterLabel = self.testLayout[3]
-        self.characterLabel.setText(f"Character: {self.currentUser.getCharacterSelected().name}")
+        self.characterLabel.setText(f"Character: {self.currentUser.getCharacterSelected().name if self.currentUser.getCharacterSelected() else 'None'}")
         self.main_layout.addStretch(1)
 
         # Add buttons for profile actions

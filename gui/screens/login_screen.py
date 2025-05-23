@@ -93,13 +93,9 @@ class LoginScreen:
 
         self.inputField = create_line_edit("Enter your character name")
         self.main_layout.addWidget(self.inputField)
-
         self.main_layout.addStretch(1)
-        self.messageLabel = add_horizontal_labels(self.main_layout, "Please enter a username to create an account")
-        self.messageLabel.setAlignment(Qt.AlignCenter)
-        self.main_layout.addStretch(1)
-
-        self.buttonList  = add_horizontal_buttons(self.main_layout, "Create Account", "Back")
+        
+        self.buttonList  = add_horizontal_buttons(self.main_layout, (200,50), "Create Account", "Back")
         create_account_button = self.buttonList[0]
         back_button = self.buttonList[1]
         # Connect each button to its appropriate function

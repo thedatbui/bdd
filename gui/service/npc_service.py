@@ -2,6 +2,7 @@ from gui.models.Player import *
 from gui.models.Npc import *
 from gui.service.db_service import DatabaseService
 
+
 class NpcService:
     """Service for NPC operations."""
     
