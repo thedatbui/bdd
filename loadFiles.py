@@ -390,6 +390,14 @@ def loadNpcData(cursor, npcFile):
             cursor.execute("INSERT INTO NPC (NpcName, Dialogue, Type) VALUES (%s, %s, %s)", (name, dialogue, pnj_type))
             npc_id = cursor.lastrowid
             print(f"✅ Ajouté PNJ : {name}")
+        
+        # Chargement des quêtes proposées
+        for quest_name in npc.get("Quêtes", []):
+            # Vérifier si la relation existe déjà
+            cursor.execute("SELECT COUNT(*) FROM NPCQuest WHERE NPCID = %s AND QuestName = %s", (npc_id, quest_name))
+            if cursor.fetchone()[0] == 0:
+                cursor.execute("INSERT INTO NPCQuest (NPCID, QuestName) VALUES (%s, %s)", (npc_id, quest_name))
+                print(f"✅ Ajoutée quête '{quest_name}' pour PNJ '{name}'")
 
         # Chargement de l'inventaire
         objets_vus = {}
@@ -402,7 +410,7 @@ def loadNpcData(cursor, npcFile):
 
         for objet, quantite in objets_vus.items():
             try:
-                # Vérifie si l’objet existe dans ObjectTest
+                # Vérifie si l'objet existe dans ObjectTest
                 cursor.execute("SELECT COUNT(*) FROM ObjectTest WHERE ObjectName = %s", (objet,))
                 if cursor.fetchone()[0] == 0:
                     print(f"⚠️ Objet inconnu '{objet}' → ignoré pour PNJ '{name}'")
