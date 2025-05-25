@@ -15,6 +15,7 @@ MenuState = {
     "Npc": 6,
     "Bestiary": 7,
     "Profile": 8,
+    "Quest": 9,
 }
 
 def getCurrentUser():

@@ -23,7 +23,18 @@ CREATE TABLE CharacterTable (
     Intelligence INT,
     pv INT,
     mana INT,
+    Quest_In_Progress VARCHAR(100) DEFAULT NULL,
     FOREIGN KEY (PlayerID) REFERENCES Player(ID) ON DELETE CASCADE
+);
+
+CREATE TABLE CharacterQuest (
+    CharacterID INT,
+    QuestName VARCHAR(100),
+    BeastName VARCHAR(50),
+    killNumber INT DEFAULT 0,
+    BeastKilled INT DEFAULT 0,
+    PRIMARY KEY (CharacterID, QuestName, BeastName),
+    FOREIGN KEY (CharacterID) REFERENCES CharacterTable(ID) ON DELETE CASCADE
 );
 
 -- Objets

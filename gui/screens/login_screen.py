@@ -58,7 +58,11 @@ class LoginScreen:
             "Enter your username:"
         )
         self.input_field.returnPressed.connect(self.on_input_submitted)
-    
+
+        self.buttonList = add_horizontal_buttons(self.main_layout, (200, 50), "back")
+        back_button = self.buttonList
+        back_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("IntroMenu"))
+
     def on_input_submitted(self):
         """Handle username submission."""
         username = self.input_field.text()

@@ -5,6 +5,7 @@ from gui.components.labels import *
 from gui.components.butttons import *
 from gui.utils import *
 from gui.service.player_service import PlayerService
+from gui.service.character_service import CharacterService
 
 class MainMenuScreen:
     def __init__(self, main_window, scene_manager):
@@ -19,6 +20,7 @@ class MainMenuScreen:
         self.scene_manager = scene_manager
         self.main_layout = main_window.mainLayout
         self.player_service = PlayerService()
+        self.character_service = CharacterService()
         
     
     def setupMainMenu(self):
@@ -27,26 +29,39 @@ class MainMenuScreen:
         """
         clear_screen(self.main_layout)
         self.currentUser = self.main_window.current_user
-
+        self.character = self.currentUser.getCharacterSelected()
+        
         self.label = create_title_label(f"Welcome back {self.currentUser.getName()} !")
         self.main_layout.addWidget(self.label)
         
-        self.testLayout = add_horizontal_labels(self.main_layout, "ID: ", "Money: ", "Character: ", "Quest: ", "Beast: ")
+        self.testLayout = add_horizontal_labels(self.main_layout, "ID: ", "Money: ", "level: ", "Character: ")
         self.idLabel = self.testLayout[0]
         self.idLabel.setText(f"ID: {self.currentUser.getId()}")
         self.moneyLabel = self.testLayout[1]
         self.moneyLabel.setText(f"Money: {self.currentUser.getMoney()}")
+        self.levelLabel = self.testLayout[3]
+        self.levelLabel.setText(f"Level: {self.currentUser.getLevel()}")
         self.characterLabel = self.testLayout[2]
         self.characterLabel.setText(f"Character: {self.currentUser.getCharacterSelected().getAttribute('name') if self.currentUser.getCharacterSelected() else 'None'}")
+
+        self.questLayout = add_horizontal_labels(self.main_layout, "Quest: ")
+        self.QuestLabel = self.questLayout
+
+        if self.character is None:
+            self.QuestLabel.setText("Quest: None")
+        else:
+            self.charaterId = self.character.getAttribute("Id")
+            self.QuestLabel.setText(f"Quest: {self.character_service.get_selected_quest(self.charaterId) if self.character_service.get_selected_quest(self.charaterId) else 'None'}")
         self.main_layout.addStretch(1)
 
-        self.buttonLayout = add_vertical_buttons(self.main_layout, (200, 50),"Character", "Inventory", "NPC", "Monster", "Profile")
+        self.buttonLayout = add_vertical_buttons(self.main_layout, (200, 50),"Character", "Inventory", "NPC", "Monster", "Quest", "Profile")
         
         character_button = self.buttonLayout[0]
         inventory_button = self.buttonLayout[1]
         npc_button = self.buttonLayout[2]
         monster_button = self.buttonLayout[3]
-        profile_button = self.buttonLayout[4]
+        quest_button = self.buttonLayout[4]
+        profile_button = self.buttonLayout[5]
 
         self.main_layout.addStretch(1)
         #Connect each button to its appropriate function
@@ -56,12 +71,22 @@ class MainMenuScreen:
             inventory_button.setStyleSheet("background-color: gray;")
             npc_button.setEnabled(False)
             npc_button.setStyleSheet("background-color: gray;")
+            monster_button.setEnabled(False)
+            monster_button.setStyleSheet("background-color: gray;")
+            quest_button.setEnabled(False)
+            quest_button.setStyleSheet("background-color: gray;")
         else:
             inventory_button.setEnabled(True)
             inventory_button.setStyleSheet("background-color: lightblue;")
             npc_button.setEnabled(True)
             npc_button.setStyleSheet("background-color: lightblue;")
+            monster_button.setEnabled(True)
+            monster_button.setStyleSheet("background-color: lightblue;")
+            quest_button.setEnabled(True)
+            quest_button.setStyleSheet("background-color: lightblue;")
+
         inventory_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Inventory"))
         npc_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Npc"))
-        # monster_button.clicked.connect(self.setupMonsterMenu)
-        profile_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Profile"))   
+        monster_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Bestiary"))
+        profile_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Profile"))  
+        quest_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Quest")) 

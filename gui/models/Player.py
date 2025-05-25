@@ -52,6 +52,24 @@ class Player():
     def setNpc(self, npc):
         self.npc = npc
     
+    def setMoney(self, money):
+        if money >= 0:
+            self.money = money
+        else:
+            raise ValueError("Money cannot be negative.")
+        
+    def setLevel(self, level):
+        if level >= 0:
+            self.level = level
+        else:
+            raise ValueError("Level cannot be negative.")
+        
+    def setInventorySlot(self, inventorySlot):
+        if inventorySlot >= 0:
+            self.inventorySlot = inventorySlot
+        else:
+            raise ValueError("Inventory slot cannot be negative.")
+        
     def setAttribute(self, name, Id, money, level, inventorySlot):
         self.name = name
         self.Id = Id
@@ -103,7 +121,3 @@ class Player():
         # If not, insert the item into the inventory
         self.inventory.add_item(self.Id, self.characterSeleted.getAttribute("Id"), item.getName(), self.inventorySlot)
         print("Item added to inventory.")
-    
-
-    
-        

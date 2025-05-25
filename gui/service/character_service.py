@@ -112,7 +112,6 @@ class CharacterService:
         results = self.db_service.fetch_all()
         for result in results:
             table_name = result[0]
-            print(table_name)
             query = f"DELETE FROM {table_name} WHERE CharacterID = %s"
             if not self.db_service.execute_query(query, (characterId,)):
                 return False, f"Failed to delete related data from {table_name}."
@@ -125,3 +124,193 @@ class CharacterService:
             return False, "Failed to commit character deletion."
         
         return True, f"Character {characterId} deleted successfully."
+    
+    def insert_character_killQuest(self, characterId, quest, beast, count):
+        """
+        Insert a new character quest.
+        
+        Args:
+            characterId (int): The character's ID
+            quest (str): The quest name
+            beast (str): The beast name
+            count (int): The kill count
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        # first check if the quest already exists for the character
+        query = "SELECT * FROM CharacterQuest WHERE CharacterID = %s AND QuestName = %s"
+        self.db_service.execute_query(query, (characterId, quest))
+        if self.db_service.fetch_one() is not None:
+            return False
+        
+        query = """
+        INSERT INTO CharacterQuest (CharacterID, QuestName, BeastName, killNumber) 
+        VALUES (%s, %s, %s, %s)
+        """
+        values = (characterId, quest, beast, count)
+        
+        if not self.db_service.execute_query(query, values):
+            return False
+        
+        return self.db_service.commit()
+    
+    def select_quest(self, characterId, quest):
+        """
+        Select a quest for a character.
+        
+        Args:
+            characterId (int): The character's ID
+            quest (str): The quest to select
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        query = "UPDATE CharacterTable SET Quest_In_Progress = %s WHERE ID = %s"
+        if not self.db_service.execute_query(query, (quest, characterId)):
+            return False
+        
+        return self.db_service.commit()
+    
+    def update_beast_killed(self, characterId, questName, beastKilled):
+        """
+        Update the number of beasts killed by a character.
+        
+        Args:
+            characterId (int): The character's ID
+            beastKilled (int): The number of beasts killed
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        query = "UPDATE CharacterQuest SET BeastKilled = %s WHERE CharacterID = %s AND QuestName = %s"
+        if not self.db_service.execute_query(query, (beastKilled, characterId, questName)):
+            return False
+        
+        return self.db_service.commit()
+    
+    def get_beast_killed(self, characterID, quest):
+        """
+        Get the number of beasts killed by a character.
+        
+        Returns:
+            int: The number of beasts killed or None if not found
+        """
+        query = "SELECT BeastKilled FROM CharacterQuest WHERE CharacterID = %s AND QuestName = %s"
+        self.db_service.execute_query(query, (characterID, quest))
+        result = self.db_service.fetch_one()
+        print(f"get_beast_killed query: {query} with params: {characterID}, {quest}")
+        print(f"get_beast_killed: {result}")
+        return result[0] if result else None
+    
+    def get_count(self, quest):
+        """
+        Get the count objective for a quest.
+        
+        Args:
+            quest (str): The quest name
+            
+        Returns:
+            int: The count objective or None if not found
+        """
+        query = "SELECT killNumber FROM CharacterQuest WHERE QuestName = %s"
+        self.db_service.execute_query(query, (quest,))
+        result = self.db_service.fetch_one()
+        
+        return result[0] if result else None
+        
+    def get_selected_quest(self, characterId):
+        """
+        Get the selected quest for a character.
+        
+        Args:
+            characterId (int): The character's ID
+            
+        Returns:
+            str: The selected quest name or None if not found
+        """
+        query = "SELECT Quest_In_Progress FROM CharacterTable WHERE ID = %s"
+        self.db_service.execute_query(query, (characterId,))
+        result = self.db_service.fetch_one()
+        
+        return result[0] if result else None
+    
+    def get_beast_to_kill(self, characterId, quest):
+        """
+        Get the beast to kill for a character's quest.
+        
+        Args:
+            characterId (int): The character's ID
+            
+        Returns:
+            str: The beast name or None if not found
+        """
+        query = "SELECT BeastName FROM CharacterQuest WHERE CharacterID = %s AND QuestName = %s"
+        self.db_service.execute_query(query, (characterId, quest))
+        result = self.db_service.fetch_one()
+        return result[0] if result else None
+    
+    def get_quest_list(self, characterId):
+        """
+        Get the list of quests for a character.
+        
+        Args:
+            characterId (int): The character's ID
+            
+        Returns:
+            list: List of quest names
+        """
+        query = "SELECT QuestName FROM CharacterQuest WHERE CharacterID = %s"
+        self.db_service.execute_query(query, (characterId,))
+        results = self.db_service.fetch_all()
+        
+        return [result[0] for result in results] if results else []
+    
+    def remove_quest(self, characterId, quest):
+        """
+        Remove a quest from a character.
+        
+        Args:
+            characterId (int): The character's ID
+            quest (str): The quest name
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        query = "DELETE FROM CharacterQuest WHERE CharacterID = %s AND QuestName = %s"
+        if not self.db_service.execute_query(query, (characterId, quest)):
+            return False
+        
+        return self.db_service.commit()
+    
+    def select_next_quest(self, characterId):
+        """
+        Select the next quest for a character.
+        Sets Quest_In_Progress to NULL if no quests are available.
+        
+        Args:
+            characterId (int): The character's ID
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        # First check if there are any quests available
+        query = "SELECT QuestName FROM CharacterQuest WHERE CharacterID = %s AND BeastKilled < killNumber ORDER BY QuestName LIMIT 1"
+        self.db_service.execute_query(query, (characterId,))
+        result = self.db_service.fetch_one()
+        
+        # Prepare to update the character's Quest_In_Progress
+        next_query = "UPDATE CharacterTable SET Quest_In_Progress = %s WHERE ID = %s"
+        
+        if result:
+            # If a quest is available, set it as the current quest
+            quest_name = result[0]
+            if not self.db_service.execute_query(next_query, (quest_name, characterId)):
+                return False
+        else:
+            # If no quests are available, set Quest_In_Progress to NULL
+            if not self.db_service.execute_query(next_query, (None, characterId)):
+                return False
+        
+        # Commit the changes
+        return self.db_service.commit()

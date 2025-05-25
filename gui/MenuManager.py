@@ -6,13 +6,15 @@ from gui.screens.character_screen import CharacterMenuScreen
 from gui.screens.inventory_screen import InventoryMenuScreen
 from gui.screens.npc_screen import NpcScreen
 from gui.screens.profile import ProfileScreen
+from gui.screens.Bestiary_screen import BestiaryScreen
+from gui.screens.Quest_screen import QuestScreen
 class SceneManager:
     """Manager for switching between different screens."""
     
     def __init__(self, main_window):
         """
         Initialize the scene manager.
-        
+
         Args:
             main_window: The application's main window
         """
@@ -25,11 +27,12 @@ class SceneManager:
         self.inventory_screen = InventoryMenuScreen(main_window, self)
         self.npc_screen = NpcScreen(main_window, self)
         self.profile_screen = ProfileScreen(main_window, self)
-    
+        self.bestiary_screen = BestiaryScreen(main_window, self)
+        self.quest_screen = QuestScreen(main_window, self)
+
     def set_scene(self):
         """Set the current scene based on the current menu state."""
         current_state = getMenuState()
-        
         if current_state == 0:
             self.intro_screen.setup()
         elif current_state == 1:
@@ -44,10 +47,12 @@ class SceneManager:
             self.inventory_screen.setupInventoryMenu()
         elif current_state == 6:
             self.npc_screen.setupNpcMenu()
-        # elif current_state == 7:
-        #     self.bestiary_screen.setupBestiaryMenu()
+        elif current_state == 7:
+            self.bestiary_screen.setupBestiaryMenu()
         elif current_state == 8:
             self.profile_screen.setupProfileMenu()
+        elif current_state == 9:
+            self.quest_screen.setupQuestMenu()
     
     def switch_to_menu(self, menu_state):
         """

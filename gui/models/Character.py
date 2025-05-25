@@ -51,5 +51,3 @@ class Character:
             return self.mana
         else:
             raise ValueError(f"Unknown attribute: {attribute}")
-    
-    
