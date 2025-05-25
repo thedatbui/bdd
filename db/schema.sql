@@ -98,6 +98,23 @@ CREATE TABLE Rewards (
     FOREIGN KEY (ObjectName) REFERENCES ObjectTest(ObjectName)
 );
 
+-- Or des monstres
+CREATE TABLE MonsterGold (
+    MonsterID INT NOT NULL,
+    GoldAmount INT NOT NULL,
+    DropRate INT NOT NULL,
+    PRIMARY KEY (MonsterID),
+    FOREIGN KEY (MonsterID) REFERENCES Bestiary(ID) ON DELETE CASCADE
+);
+
+-- Or des quêtes
+CREATE TABLE QuestGold (
+    QuestID INT NOT NULL,
+    GoldAmount INT NOT NULL,
+    PRIMARY KEY (QuestID),
+    FOREIGN KEY (QuestID) REFERENCES Quest(ID) ON DELETE CASCADE
+);
+
 -- PNJ ↔ Quêtes
 CREATE TABLE NPCQuest (
     NPCID INT,

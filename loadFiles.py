@@ -106,8 +106,6 @@ def loadMonsterData(cursor, root):
     """
     Load monster data from an XML file into the database, including drops.
     """
-    #enlever les _ pour les objets
-    
     print("Loading monster data...")
     for monster in root.findall('monstre'):
         monster_attaque = monster.find('attaque')
@@ -155,41 +153,46 @@ def loadMonsterData(cursor, root):
             continue
 
         # Process drops
-     
         drops = monster.find('drops')
         for drop in drops:
             if replace_underscores_with_spaces(drop.tag) == 'Or':
-                drop_name = 'Gold'
+                # Gérer l'or séparément
+                gold_amount = int(drop.find('nombre').text) if drop.find('nombre') is not None else 0
+                gold_probability = int(drop.find('probabilité').text) if drop.find('probabilité') is not None else 0
+                
+                # Insérer l'or dans la table MonsterGold
+                cursor.execute(
+                    "INSERT INTO MonsterGold (MonsterID, GoldAmount, DropRate) "
+                    "VALUES (%s, %s, %s)",
+                    (monster_id, gold_amount, gold_probability)
+                )
+                print(f"Added gold drop: {gold_amount} (rate: {gold_probability}%) for monster: {monster_name}")
             else:
                 drop_name = replace_underscores_with_spaces(drop.tag)
-        
-            drop_quantity = int(drop.find('nombre').text) if drop.find('nombre') is not None else 0
-            drop_probability = int(drop.find('probabilité').text) if drop.find('probabilité') is not None else 0
-                
-            cursor.execute("SELECT COUNT(*) FROM ObjectTest WHERE ObjectName = %s", (drop_name,))
+                drop_quantity = int(drop.find('nombre').text) if drop.find('nombre') is not None else 0
+                drop_probability = int(drop.find('probabilité').text) if drop.find('probabilité') is not None else 0
+                    
+                cursor.execute("SELECT COUNT(*) FROM ObjectTest WHERE ObjectName = %s", (drop_name,))
 
-            if cursor.fetchone()[0] == 0:
-                print(f"Warning: '{drop_name}' not found in ObjectTest. Skipping this drop.")
-            else:
-                # Check if the drop already exists for the monster
-                cursor.execute(
-                    "SELECT COUNT(*) FROM Rewards WHERE MonsterID = %s AND ObjectName = %s",
-                    (monster_id, drop_name)
-                )
-                if cursor.fetchone()[0] > 0:
-                    print(f"Drop '{drop_name}' already exists for monster ID {monster_id}. Skipping insert.")
-                    continue
-                # Insert drop data into the Rewards table
-                cursor.execute(
-                    "INSERT INTO Rewards (MonsterID, ObjectName, DropRate, Quantity) "
-                    "VALUES (%s, %s, %s, %s)",
-                    (monster_id, drop_name, drop_probability, drop_quantity)
-                )
-        
-        
-            print("1")
-            print(f"Added drop: {drop_name} for monster: {monster_name}")
-                
+                if cursor.fetchone()[0] == 0:
+                    print(f"Warning: '{drop_name}' not found in ObjectTest. Skipping this drop.")
+                else:
+                    # Check if the drop already exists for the monster
+                    cursor.execute(
+                        "SELECT COUNT(*) FROM Rewards WHERE MonsterID = %s AND ObjectName = %s",
+                        (monster_id, drop_name)
+                    )
+                    if cursor.fetchone()[0] > 0:
+                        print(f"Drop '{drop_name}' already exists for monster ID {monster_id}. Skipping insert.")
+                        continue
+                    # Insert drop data into the Rewards table
+                    cursor.execute(
+                        "INSERT INTO Rewards (MonsterID, ObjectName, DropRate, Quantity) "
+                        "VALUES (%s, %s, %s, %s)",
+                        (monster_id, drop_name, drop_probability, drop_quantity)
+                    )
+                    print(f"Added drop: {drop_name} for monster: {monster_name}")
+
 def loadQuestData(cursor, root):
     """
     Load quest data from an XML file into the database.
@@ -224,30 +227,36 @@ def loadQuestData(cursor, root):
         if rewards is not None:
             for reward in rewards:
                 if reward.tag == 'Or':
-                    reward_name = 'Gold'
-                    reward_quantity = int(reward.text)
+                    # Gérer l'or séparément
+                    gold_amount = int(reward.text)
+                    cursor.execute(
+                        "INSERT INTO QuestGold (QuestID, GoldAmount) "
+                        "VALUES (%s, %s)",
+                        (quest_id, gold_amount)
+                    )
+                    print(f"Added gold reward: {gold_amount} for quest: {quest_name}")
                 else:
                     reward_name = reward.text
                     reward_quantity = 1
 
-                cursor.execute("SELECT COUNT(*) FROM ObjectTest WHERE ObjectName = %s", (reward_name,))
-                if cursor.fetchone()[0] == 0:
-                    print(f"Warning: '{reward_name}' not found in ObjectTest. Skipping this reward.")
-                else:
-                    cursor.execute(
-                        "SELECT COUNT(*) FROM Quest_Objects WHERE QuestID = %s AND ObjectName = %s",
-                        (quest_id, reward_name)
-                    )
-                    if cursor.fetchone()[0] > 0:
-                        print(f"Reward '{reward_name}' already exists for quest '{quest_name}'. Skipping insert.")
-                        continue
+                    cursor.execute("SELECT COUNT(*) FROM ObjectTest WHERE ObjectName = %s", (reward_name,))
+                    if cursor.fetchone()[0] == 0:
+                        print(f"Warning: '{reward_name}' not found in ObjectTest. Skipping this reward.")
+                    else:
+                        cursor.execute(
+                            "SELECT COUNT(*) FROM Quest_Objects WHERE QuestID = %s AND ObjectName = %s",
+                            (quest_id, reward_name)
+                        )
+                        if cursor.fetchone()[0] > 0:
+                            print(f"Reward '{reward_name}' already exists for quest '{quest_name}'. Skipping insert.")
+                            continue
 
-                    cursor.execute(
-                        "INSERT INTO Quest_Objects (QuestID, ObjectName, Quantity) "
-                        "VALUES (%s, %s, %s)",
-                        (quest_id, reward_name, reward_quantity)
-                    )
-                    print(f"Added reward: {reward_name} for quest: {quest_name}")
+                        cursor.execute(
+                            "INSERT INTO Quest_Objects (QuestID, ObjectName, Quantity) "
+                            "VALUES (%s, %s, %s)",
+                            (quest_id, reward_name, reward_quantity)
+                        )
+                        print(f"Added reward: {reward_name} for quest: {quest_name}")
 
     
             
