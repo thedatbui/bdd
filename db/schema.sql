@@ -4,13 +4,14 @@ USE InventaireRPG;
 
 --  Joueurs
 CREATE TABLE Player (
-    ID INT AUTO_INCREMENT PRIMARY KEY,
-    UserName VARCHAR(50) UNIQUE NOT NULL,
-    PlayerLevel INT DEFAULT 1,
-    ExperiencePoints INT DEFAULT 0,
-    WalletCredits INT DEFAULT 0 CHECK (WalletCredits >= 0),,
-    InventorySlot INT DEFAULT 1
+    ID               INT AUTO_INCREMENT PRIMARY KEY,
+    UserName         VARCHAR(50)  UNIQUE NOT NULL,
+    PlayerLevel      INT          DEFAULT 1,
+    ExperiencePoints INT          DEFAULT 0,
+    WalletCredits    INT          DEFAULT 0 CHECK (WalletCredits >= 0),
+    InventorySlot    INT          DEFAULT 1
 );
+
 
 --  Personnages créés par les joueurs
 CREATE TABLE CharacterTable (
@@ -76,7 +77,6 @@ CREATE TABLE Quest (
     Description VARCHAR(500),
     DifficultyLevel INT,
     RewardXP INT
-    CHECK (RewardXP > 0) 
 );
 
 --  Objets récompensés par des quêtes

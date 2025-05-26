@@ -314,3 +314,15 @@ class CharacterService:
         
         # Commit the changes
         return self.db_service.commit()
+    
+
+    def get_wallet_for_character(self, character_id):
+        """
+        Récupère le solde d'or (WalletCredits) du personnage.
+        """
+        self.db_service.execute_query(
+            "SELECT WalletCredits FROM CharacterTable WHERE ID = %s",
+            (character_id,)
+        )
+        row = self.db_service.fetch_one()
+        return (row or (0,))[0]

@@ -51,3 +51,10 @@ class Character:
             return self.mana
         else:
             raise ValueError(f"Unknown attribute: {attribute}")
+        
+    def get_wallet_for_character(self, character_id):
+        self.db_service.execute_query(
+            "SELECT WalletCredits FROM CharacterTable WHERE ID = %s",
+            (character_id,)
+        )
+        return (self.db_service.fetch_one() or (0,))[0]

@@ -78,11 +78,17 @@ class NpcScreen:
         Set up the shop and quest menu.
         """
         clear_screen(self.main_layout)
+
+        self.currentUser  = self.main_window.current_user
+        self.character    = self.currentUser.getCharacterSelected()
+        self.characterId  = self.character.getAttribute("Id")
       
         self.label = create_title_label(f"{dialogue}", 12)
         self.main_layout.addWidget(self.label)
 
-        self.label = create_label(f"Money: {self.currentUser.getMoney()}")
+        gold = self.character_service.get_wallet_for_character(self.characterId)
+        self.label = create_label(f"Gold: {gold}")
+
         self.main_layout.addWidget(self.label)
 
         self.subLayout = QHBoxLayout()

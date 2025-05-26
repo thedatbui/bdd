@@ -100,19 +100,67 @@ class BestiaryScreen:
                         f"Life Points: {bestiary.getLifePoints()}"
             self.label.setText(details)
     
+
     def kill_monster(self):
         """Handle the action of killing a monster."""
+        # 1) Récupérer le nom de la bête sélectionnée
         beast_name = self.bestiaryList.currentItem().data(Qt.UserRole)
         if beast_name != self.beast:
-            QMessageBox.warning(self.main_window, "Error", "You must select the correct beast to kill.")
+            QMessageBox.warning(self.main_window, "Erreur", "Sélectionnez la bonne bête.")
             return
-        
+
+        # 2) Lookup de monster_id
+        self.bestiary_service.db_service.execute_query(
+            "SELECT ID FROM Bestiary WHERE BeastName = %s",
+            (beast_name,)
+        )
+        monster_id_row = self.bestiary_service.db_service.fetch_one()
+        if not monster_id_row:
+            QMessageBox.critical(self.main_window, "Erreur", "Monstre introuvable en base.")
+            return
+        monster_id = monster_id_row[0]
+
+        # 3) Appel de la méthode de récompense (XP + loot)
+        result = self.bestiary_service.reward_character_for_monster(
+            self.characterId,
+            monster_id
+        )
+
+        # 4) Affichage du résumé
+        msg_lines = [
+            f"You defeated « {beast_name} »!",
+            f"XP gained: {result['xp']}"
+        ]
+        if result['gold']:
+            msg_lines.append(f"Gold gained: {result['gold']}")
+        for name, qty in result['items']:
+            msg_lines.append(f"{qty}× {name}")
+
+        QMessageBox.information(
+            self.main_window,
+            "Combat Rewards",
+            "\n".join(msg_lines)
+        )
+
+        # 5) Rafraîchir le label d’or (s’il existe)
+        if hasattr(self, 'goldLabel'):
+            new_gold = self.character_service.get_wallet_for_character(self.characterId)
+            self.goldLabel.setText(f"Gold: {new_gold}")
+
+        # 6) Mise à jour de la progression de quête
         if self.beastKilled < self.count:
-            self.character_service.update_beast_killed(self.characterId, self.questSelected, self.beastKilled + 1)
+            self.character_service.update_beast_killed(
+                self.characterId,
+                self.questSelected,
+                self.beastKilled + 1
+            )
             self.beastKilled += 1
             self.beastKilledLabel.setText(f"Beast Killed: {self.beastKilled}")
+
             if self.beastKilled == self.count:
-                QMessageBox.information(self.main_window, "Quest Completed", "Congratulations! You have completed the quest.")
+                QMessageBox.information(self.main_window, "Quête terminée",
+                                        "Félicitations !")
                 self.character_service.remove_quest(self.characterId, self.questSelected)
                 self.character_service.select_next_quest(self.characterId)
                 self.setupBestiaryMenu()
+
