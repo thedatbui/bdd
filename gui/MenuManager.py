@@ -6,6 +6,7 @@ from gui.screens.character_screen import CharacterMenuScreen
 from gui.screens.inventory_screen import InventoryMenuScreen
 from gui.screens.npc_screen import NpcScreen
 from gui.screens.profile import ProfileScreen
+from gui.screens.bestiary_screen import BestiaryScreen
 class SceneManager:
     """Manager for switching between different screens."""
     
@@ -25,6 +26,7 @@ class SceneManager:
         self.inventory_screen = InventoryMenuScreen(main_window, self)
         self.npc_screen = NpcScreen(main_window, self)
         self.profile_screen = ProfileScreen(main_window, self)
+        self.bestiary_screen = BestiaryScreen(main_window, self)
     
     def set_scene(self):
         """Set the current scene based on the current menu state."""
@@ -44,8 +46,8 @@ class SceneManager:
             self.inventory_screen.setupInventoryMenu()
         elif current_state == 6:
             self.npc_screen.setupNpcMenu()
-        # elif current_state == 7:
-        #     self.bestiary_screen.setupBestiaryMenu()
+        elif current_state == 7:
+             self.bestiary_screen.setupBestiaryMenu()
         elif current_state == 8:
             self.profile_screen.setupProfileMenu()
     

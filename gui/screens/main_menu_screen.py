@@ -53,5 +53,5 @@ class MainMenuScreen:
         character_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Character"))
         inventory_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Inventory"))
         npc_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Npc"))
-        # monster_button.clicked.connect(self.setupMonsterMenu)
+        monster_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Bestiary"))
         profile_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Profile"))   
