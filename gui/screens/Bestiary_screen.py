@@ -136,13 +136,26 @@ class BestiaryScreen:
         for name, qty in result['items']:
             msg_lines.append(f"{qty}× {name}")
 
+        # Ajouter les informations de niveau si un level up a eu lieu
+        if result['level_up']:
+            level_up = result['level_up']
+            msg_lines.extend([
+                "",
+                f"Level Up! {level_up['old_level']} → {level_up['new_level']}",
+                f"New inventory slots: {10 + (2 * (level_up['new_level'] - 1))}",
+                f"XP for next level: {level_up['next_level_xp']}"
+            ])
+            # Mettre à jour le niveau dans l'objet Player
+            self.currentUser.setLevel(level_up['new_level'])
+            self.currentUser.setInventorySlot(10 + (2 * (level_up['new_level'] - 1)))
+
         QMessageBox.information(
             self.main_window,
             "Combat Rewards",
             "\n".join(msg_lines)
         )
 
-        # 5) Rafraîchir le label d’or (s’il existe)
+        # 5) Rafraîchir le label d'or (s'il existe)
         if hasattr(self, 'goldLabel'):
             new_gold = self.character_service.get_wallet_for_character(self.characterId)
             self.goldLabel.setText(f"Gold: {new_gold}")

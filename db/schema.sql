@@ -9,7 +9,7 @@ CREATE TABLE Player (
     PlayerLevel      INT          DEFAULT 1,
     ExperiencePoints INT          DEFAULT 0,
     WalletCredits    INT          DEFAULT 0 CHECK (WalletCredits >= 0),
-    InventorySlot    INT          DEFAULT 1
+    InventorySlot    INT          DEFAULT 10
 );
 
 
@@ -24,6 +24,7 @@ CREATE TABLE CharacterTable (
     Intelligence INT,
     pv INT,
     mana INT,
+    AttributePoints INT DEFAULT 5,
     Quest_In_Progress VARCHAR(100) DEFAULT NULL,
     FOREIGN KEY (PlayerID) REFERENCES Player(ID) ON DELETE CASCADE
 );

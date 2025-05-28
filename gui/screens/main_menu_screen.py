@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QVBoxLayout, QWidget, QMessageBox
 from PyQt5.QtCore import Qt
 
 from gui.components.labels import *
@@ -31,6 +31,13 @@ class MainMenuScreen:
         self.currentUser = self.main_window.current_user
         self.character = self.currentUser.getCharacterSelected()
         
+        # Récupérer les informations à jour depuis la base de données
+        player_info = self.player_service.get_player_by_username(self.currentUser.getName())
+        if player_info:
+            self.currentUser.setLevel(player_info.getLevel())
+            self.currentUser.setMoney(player_info.getMoney())
+            self.currentUser.setInventorySlot(player_info.getInventorySlot())
+        
         self.label = create_title_label(f"Welcome back {self.currentUser.getName()} !")
         self.main_layout.addWidget(self.label)
         
@@ -54,14 +61,15 @@ class MainMenuScreen:
             self.QuestLabel.setText(f"Quest: {self.character_service.get_selected_quest(self.charaterId) if self.character_service.get_selected_quest(self.charaterId) else 'None'}")
         self.main_layout.addStretch(1)
 
-        self.buttonLayout = add_vertical_buttons(self.main_layout, (200, 50),"Character", "Inventory", "NPC", "Monster", "Quest", "Profile")
+        self.buttonLayout = add_vertical_buttons(self.main_layout, (200, 50),"Character", "Inventory", "NPC", "Monster", "Quest", "Manage Attributes", "Profile")
         
         character_button = self.buttonLayout[0]
         inventory_button = self.buttonLayout[1]
         npc_button = self.buttonLayout[2]
         monster_button = self.buttonLayout[3]
         quest_button = self.buttonLayout[4]
-        profile_button = self.buttonLayout[5]
+        manage_attributes_button = self.buttonLayout[5]
+        profile_button = self.buttonLayout[6]
 
         self.main_layout.addStretch(1)
         #Connect each button to its appropriate function
@@ -75,6 +83,8 @@ class MainMenuScreen:
             monster_button.setStyleSheet("background-color: gray;")
             quest_button.setEnabled(False)
             quest_button.setStyleSheet("background-color: gray;")
+            manage_attributes_button.setEnabled(False)
+            manage_attributes_button.setStyleSheet("background-color: gray;")
         else:
             inventory_button.setEnabled(True)
             inventory_button.setStyleSheet("background-color: lightblue;")
@@ -84,9 +94,145 @@ class MainMenuScreen:
             monster_button.setStyleSheet("background-color: lightblue;")
             quest_button.setEnabled(True)
             quest_button.setStyleSheet("background-color: lightblue;")
+            manage_attributes_button.setEnabled(True)
+            manage_attributes_button.setStyleSheet("background-color: lightblue;")
 
         inventory_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Inventory"))
         npc_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Npc"))
         monster_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Bestiary"))
-        profile_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Profile"))  
-        quest_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Quest")) 
+        profile_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Profile"))
+        quest_button.clicked.connect(lambda: self.scene_manager.switch_to_menu("Quest"))
+        manage_attributes_button.clicked.connect(self.setupManageAttributesMenu)
+
+    def setupManageAttributesMenu(self):
+        """
+        Set up the manage attributes menu.
+        """
+        if not self.currentUser.getCharacterSelected():
+            QMessageBox.warning(self.main_window, "Error", "Please select a character first!")
+            return
+
+        character = self.currentUser.getCharacterSelected()
+        available_points = self.character_service.get_attribute_points(character.Id)
+        
+        clear_screen(self.main_layout)
+
+        self.label = create_title_label(f"Manage Attributes - {character.name}")
+        self.main_layout.addWidget(self.label)
+
+        # Add attribute points display
+        self.attributePointsLabel = QLabel(f"Attribute Points Available: {available_points}")
+        self.attributePointsLabel.setStyleSheet("color: green; font-weight: bold;")
+        self.main_layout.addWidget(self.attributePointsLabel)
+        
+        # Initialize attribute values
+        self.attributes = {
+            "Strength": character.getAttribute("strength"),
+            "Agility": character.getAttribute("agility"),
+            "Intelligence": character.getAttribute("intelligence"),
+            "pv": character.getAttribute("pv"),
+            "mana": character.getAttribute("mana")
+        }
+        
+        # Create layouts for attributes with increase/decrease buttons
+        self.attributeLayouts = {}
+        for attr in self.attributes:
+            layout = QHBoxLayout()
+            
+            # Label showing attribute name and current value
+            label = QLabel(f"{attr}: {self.attributes[attr]}")
+            layout.addWidget(label)
+            layout.addStretch()
+            
+            # Only add +/- buttons for Strength, Agility, and Intelligence if points are available
+            if attr in ["Strength", "Agility", "Intelligence"] and available_points > 0:
+                self.buttonList = add_horizontal_buttons(layout, (30, 30), "-", "+")
+                decreaseBtn = self.buttonList[0]
+                increaseBtn = self.buttonList[1]
+                
+                decreaseBtn.clicked.connect(lambda checked, a=attr: self.decreaseAttribute(a))
+                increaseBtn.clicked.connect(lambda checked, a=attr: self.increaseAttribute(a))
+            else:
+                # For pv and mana, or if no points available, just show the value
+                layout.addStretch()
+        
+            # Store references to the label for updating
+            self.attributeLayouts[attr] = {
+                "layout": layout,
+                "label": label
+            }
+            
+            # Add the attribute layout to main layout
+            self.main_layout.addLayout(layout)
+        
+        self.main_layout.addStretch(1)
+
+        self.buttonList = add_horizontal_buttons(self.main_layout, (200, 50), "Save Changes", "Back")
+        save_button = self.buttonList[0]
+        back_button = self.buttonList[1]
+
+        # Connect each button to its appropriate function
+        back_button.clicked.connect(self.setupMainMenu)
+        save_button.clicked.connect(lambda: self.saveAttributeChanges(character))
+
+        # Disable save button if no points are available
+        if available_points <= 0:
+            save_button.setEnabled(False)
+            save_button.setStyleSheet("background-color: gray;")
+
+    def increaseAttribute(self, attr):
+        """Increase the attribute value if points are available"""
+        # Check if we have points available
+        current_points = int(self.attributePointsLabel.text().split(": ")[1])
+        if current_points > 0:
+            self.attributes[attr] += 1
+            self.attributeLayouts[attr]["label"].setText(f"{attr}: {self.attributes[attr]}")
+            self.attributePointsLabel.setText(f"Attribute Points Available: {current_points - 1}")
+
+    def decreaseAttribute(self, attr):
+        """Decrease the attribute value and return the point"""
+        if self.attributes[attr] > 10:  # Don't go below base value
+            self.attributes[attr] -= 1
+            self.attributeLayouts[attr]["label"].setText(f"{attr}: {self.attributes[attr]}")
+            current_points = int(self.attributePointsLabel.text().split(": ")[1])
+            self.attributePointsLabel.setText(f"Attribute Points Available: {current_points + 1}")
+
+    def saveAttributeChanges(self, character):
+        """
+        Save the changes made to character attributes.
+        """
+        # Check if all points have been used
+        current_points = int(self.attributePointsLabel.text().split(": ")[1])
+        if current_points > 0:
+            QMessageBox.warning(self.main_window, "Error", f"You still have {current_points} points to distribute!")
+            return
+
+        # Update character attributes in database
+        query = """
+        UPDATE CharacterTable 
+        SET Strength = %s, 
+            Agility = %s, 
+            Intelligence = %s,
+            AttributePoints = %s
+        WHERE ID = %s
+        """
+        values = (
+            self.attributes["Strength"],
+            self.attributes["Agility"],
+            self.attributes["Intelligence"],
+            current_points,  # Update the remaining points
+            character.Id
+        )
+        
+        if self.character_service.db_service.execute_query(query, values):
+            if self.character_service.db_service.commit():
+                # Update the character object with new values
+                character.setAttribute("strength", self.attributes["Strength"])
+                character.setAttribute("agility", self.attributes["Agility"])
+                character.setAttribute("intelligence", self.attributes["Intelligence"])
+                QMessageBox.information(self.main_window, "Success", "Character attributes updated successfully!")
+                self.setupMainMenu()
+            else:
+                QMessageBox.warning(self.main_window, "Error", "Failed to save changes!")
+        else:
+            QMessageBox.warning(self.main_window, "Error", "Failed to update character attributes!") 

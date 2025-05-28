@@ -1,5 +1,5 @@
 from PyQt5 import QtGui
-from PyQt5.QtWidgets import QLabel, QMessageBox
+from PyQt5.QtWidgets import QLabel, QMessageBox, QDialog, QVBoxLayout, QHBoxLayout, QPushButton
 from PyQt5.QtCore import Qt
 
 from gui.components.labels import create_title_label, create_label
@@ -147,7 +147,115 @@ class CharacterMenuScreen:
         Intelligence: {character.getAttribute('intelligence')}
         PV: {character.getAttribute('pv')}
         Mana: {character.getAttribute('mana')}""")
-           
+
+    def setupManageAttributesMenu(self):
+        """
+        Set up the manage attributes menu.
+        """
+        current_row = self.character_list.currentRow()
+        if current_row < 0:
+            QMessageBox.warning(self.main_window, "Error", "Please select a character first!")
+            return
+
+        character = self.characterList[current_row]
+        available_points = self.character_service.get_attribute_points(character.Id)
+        
+        if available_points <= 0:
+            QMessageBox.information(self.main_window, "No Points Available", "You don't have any attribute points to distribute!")
+            return
+
+        clear_screen(self.main_layout)
+
+        self.label = create_title_label(f"Manage Attributes - {character.name}")
+        self.main_layout.addWidget(self.label)
+
+        # Add attribute points display
+        self.attributePointsLabel = QLabel(f"Attribute Points Available: {available_points}")
+        self.attributePointsLabel.setStyleSheet("color: green; font-weight: bold;")
+        self.main_layout.addWidget(self.attributePointsLabel)
+        
+        # Initialize attribute values
+        self.attributes = {
+            "Strength": character.getAttribute("strength"),
+            "Agility": character.getAttribute("agility"),
+            "Intelligence": character.getAttribute("intelligence"),
+            "pv": character.getAttribute("pv"),
+            "mana": character.getAttribute("mana")
+        }
+        
+        # Create layouts for attributes with increase/decrease buttons
+        self.attributeLayouts = {}
+        for attr in self.attributes:
+            layout = QHBoxLayout()
+            
+            # Label showing attribute name and current value
+            label = QLabel(f"{attr}: {self.attributes[attr]}")
+            layout.addWidget(label)
+            layout.addStretch()
+            
+            # Only add +/- buttons for Strength, Agility, and Intelligence
+            if attr in ["Strength", "Agility", "Intelligence"]:
+                self.buttonList = add_horizontal_buttons(layout, (30, 30), "-", "+")
+                decreaseBtn = self.buttonList[0]
+                increaseBtn = self.buttonList[1]
+                
+                decreaseBtn.clicked.connect(lambda checked, a=attr: self.decreaseAttribute(a))
+                increaseBtn.clicked.connect(lambda checked, a=attr: self.increaseAttribute(a))
+            else:
+                # For pv and mana, just show the value
+                layout.addStretch()
+        
+            # Store references to the label for updating
+            self.attributeLayouts[attr] = {
+                "layout": layout,
+                "label": label
+            }
+            
+            # Add the attribute layout to main layout
+            self.main_layout.addLayout(layout)
+        
+        self.main_layout.addStretch(1)
+
+        self.buttonList = add_horizontal_buttons(self.main_layout, (200, 50), "Save Changes", "Back")
+        save_button = self.buttonList[0]
+        back_button = self.buttonList[1]
+
+        # Connect each button to its appropriate function
+        back_button.clicked.connect(self.setupCharacterMenu)
+        save_button.clicked.connect(lambda: self.saveAttributeChanges(character))
+
+    def saveAttributeChanges(self, character):
+        """
+        Save the changes made to character attributes.
+        """
+        # Check if all points have been used
+        current_points = int(self.attributePointsLabel.text().split(": ")[1])
+        if current_points > 0:
+            QMessageBox.warning(self.main_window, "Error", f"You still have {current_points} points to distribute!")
+            return
+
+        # Update character attributes in database
+        query = """
+        UPDATE CharacterTable 
+        SET Strength = %s, Agility = %s, Intelligence = %s
+        WHERE ID = %s
+        """
+        values = (
+            self.attributes["Strength"],
+            self.attributes["Agility"],
+            self.attributes["Intelligence"],
+            character.Id
+        )
+        
+        if self.character_service.db_service.execute_query(query, values):
+            if self.character_service.db_service.commit():
+                QMessageBox.information(self.main_window, "Success", "Character attributes updated successfully!")
+                self.setupCharacterMenu()
+            else:
+                QMessageBox.warning(self.main_window, "Error", "Failed to save changes!")
+        else:
+            QMessageBox.warning(self.main_window, "Error", "Failed to update character attributes!")
+
     def setupCreateCharacterMenu(self):
         """
         Set up the create character menu.
@@ -179,6 +287,11 @@ class CharacterMenuScreen:
             "mana": 100
         }
         
+        # Add attribute points display
+        self.attributePointsLabel = QLabel("Attribute Points Available: 5")
+        self.attributePointsLabel.setStyleSheet("color: green; font-weight: bold;")
+        self.main_layout.addWidget(self.attributePointsLabel)
+        
         # Create layouts for attributes with increase/decrease buttons
         self.attributeLayouts = {}
         for attr in self.attributes:
@@ -188,12 +301,18 @@ class CharacterMenuScreen:
             label = QLabel(f"{attr}: {self.attributes[attr]}")
             layout.addWidget(label)
             layout.addStretch()
-            self.buttonList = add_horizontal_buttons(layout, (30, 30), "-", "+")
-            decreaseBtn = self.buttonList[0]
-            increaseBtn = self.buttonList[1]
             
-            decreaseBtn.clicked.connect(lambda checked, a=attr: self.decreaseAttribute(a))
-            increaseBtn.clicked.connect(lambda checked, a=attr: self.increaseAttribute(a))
+            # Only add +/- buttons for Strength, Agility, and Intelligence
+            if attr in ["Strength", "Agility", "Intelligence"]:
+                self.buttonList = add_horizontal_buttons(layout, (30, 30), "-", "+")
+                decreaseBtn = self.buttonList[0]
+                increaseBtn = self.buttonList[1]
+                
+                decreaseBtn.clicked.connect(lambda checked, a=attr: self.decreaseAttribute(a))
+                increaseBtn.clicked.connect(lambda checked, a=attr: self.increaseAttribute(a))
+            else:
+                # For pv and mana, just show the value
+                layout.addStretch()
         
             # Store references to the label for updating
             self.attributeLayouts[attr] = {
@@ -215,18 +334,21 @@ class CharacterMenuScreen:
         createAcc_button.clicked.connect(self.createCharacter)
 
     def increaseAttribute(self, attr):
-        """Increase the attribute value"""
-        if self.attributes[attr] < 200:
+        """Increase the attribute value if points are available"""
+        # Check if we have points available
+        current_points = int(self.attributePointsLabel.text().split(": ")[1])
+        if current_points > 0:
             self.attributes[attr] += 1
-
-        self.attributeLayouts[attr]["label"].setText(f"{attr}: {self.attributes[attr]}")
-            
+            self.attributeLayouts[attr]["label"].setText(f"{attr}: {self.attributes[attr]}")
+            self.attributePointsLabel.setText(f"Attribute Points Available: {current_points - 1}")
 
     def decreaseAttribute(self, attr):
-        """Decrease the attribute value"""
-        if self.attributes[attr] > 0:
+        """Decrease the attribute value and return the point"""
+        if self.attributes[attr] > 10:  # Don't go below base value
             self.attributes[attr] -= 1
-        self.attributeLayouts[attr]["label"].setText(f"{attr}: {self.attributes[attr]}")
+            self.attributeLayouts[attr]["label"].setText(f"{attr}: {self.attributes[attr]}")
+            current_points = int(self.attributePointsLabel.text().split(": ")[1])
+            self.attributePointsLabel.setText(f"Attribute Points Available: {current_points + 1}")
 
     def createCharacter(self):
         """Handle character creation"""
@@ -236,7 +358,7 @@ class CharacterMenuScreen:
             QMessageBox.warning(self.main_window, "Input Error", "Please enter a character name.")
             return
 
-        #check if the character name already exists
+        # Check if the character name already exists
         result = self.character_service.check_character_exists(characterName)
         if result:
             QMessageBox.warning(self.main_window, "Input Error", f"Character {characterName} already exists.")
@@ -244,13 +366,21 @@ class CharacterMenuScreen:
             self.inputField.setFocus()
             return
 
+        # Check if all attribute points have been used
+        current_points = int(self.attributePointsLabel.text().split(": ")[1])
+        if current_points > 0:
+            QMessageBox.warning(self.main_window, "Input Error", f"You still have {current_points} attribute points to distribute.")
+            return
+
         # Create a new Character object
         newCharacter = Character(None, characterName, classe, self.attributes["Strength"], self.attributes["Agility"], 
                                  self.attributes["Intelligence"], self.attributes["pv"], self.attributes["mana"])
 
-        #Insert the new character into the database
-        self.character_service.create_character(self.currentUser.getId(), newCharacter)
-    
-        response = QMessageBox.information(self.main_window, "Success", f"Character {characterName} created successfully.")
-        if response == QMessageBox.Ok:
+        # Insert the new character into the database
+        success, message = self.character_service.create_character(self.currentUser.getId(), newCharacter)
+        
+        if success:
+            QMessageBox.information(self.main_window, "Success", message)
             self.scene_manager.switch_to_menu("Character")
+        else:
+            QMessageBox.warning(self.main_window, "Error", message)

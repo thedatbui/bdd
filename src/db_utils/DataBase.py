@@ -5,7 +5,7 @@ class DataBase:
     def __init__(self):
         self.connection = None
         self.cursor = None
-
+    
     def connectToDatabase(self):
         """
         Connect to the MySQL database and return the connection object.
@@ -13,8 +13,8 @@ class DataBase:
         try:
             self.connection = mysql.connector.connect(
                 host='localhost',
-                user='root',
-                password='',
+                user='hassan',
+                password='777',
                 database='InventaireRPG', 
                 auth_plugin='mysql_native_password',
                 use_pure=True,

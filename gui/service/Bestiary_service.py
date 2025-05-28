@@ -40,9 +40,9 @@ class BestiaryService:
         Tue monster_id pour character_id :
          1) Récupère LifePoints (XP) et player_id lié
          2) Tire un seul objet depuis Rewards
-         3) Tire de l’or depuis MonsterGold
+         3) Tire de l'or depuis MonsterGold
          4) Met à jour Player (ExperiencePoints + WalletCredits)
-         5) Insère l’objet en Inventory
+         5) Insère l'objet en Inventory
          6) Commit et retourne {'xp','gold','items'}
         """
         db = self.db_service
@@ -74,15 +74,29 @@ class BestiaryService:
         for name, rate, qty in drops:
             cum += rate
             if pick <= cum and name.lower() != 'gold':
+                # Vérifier la capacité de l'inventaire
                 db.execute_query(
-                    """
-                    INSERT INTO Inventory (PlayerID, CharacterID, ObjectName, Quantity)
-                    VALUES (%s,%s,%s,%s)
-                    ON DUPLICATE KEY UPDATE Quantity = Quantity + %s
-                    """,
-                    (player_id, character_id, name, qty, qty)
+                    "SELECT COUNT(*) FROM Inventory WHERE CharacterID = %s",
+                    (character_id,)
                 )
-                items.append((name, qty))
+                inventory_count = db.fetch_one()[0]
+                
+                db.execute_query(
+                    "SELECT InventorySlot FROM Player WHERE ID = %s",
+                    (player_id,)
+                )
+                max_slots = db.fetch_one()[0]
+                
+                if inventory_count < max_slots:
+                    db.execute_query(
+                        """
+                        INSERT INTO Inventory (PlayerID, CharacterID, ObjectName, Quantity)
+                        VALUES (%s,%s,%s,%s)
+                        ON DUPLICATE KEY UPDATE Quantity = Quantity + %s
+                        """,
+                        (player_id, character_id, name, qty, qty)
+                    )
+                    items.append((name, qty))
                 break
 
         # 3) Tirage or depuis MonsterGold
@@ -96,19 +110,22 @@ class BestiaryService:
             gold_amount, gold_rate = mg
             if random.random() <= (gold_rate / 100.0):
                 gold_gain = gold_amount
+                # Mise à jour du wallet du joueur de manière sécurisée
+                from gui.service.character_service import CharacterService
+                character_service = CharacterService()
+                if not character_service.update_wallet(character_id, gold_gain):
+                    gold_gain = 0  # Si la transaction échoue, on ne donne pas d'or
 
-        # 4) Mise à jour du Player
-        if xp_gain:
-            db.execute_query(
-                "UPDATE Player SET ExperiencePoints = ExperiencePoints + %s WHERE ID = %s",
-                (xp_gain, player_id)
-            )
-        if gold_gain:
-            db.execute_query(
-                "UPDATE Player SET WalletCredits = WalletCredits + %s WHERE ID = %s",
-                (gold_gain, player_id)
-            )
+        # 4) Mise à jour de l'XP et gestion du niveau
+        from gui.service.character_service import CharacterService
+        character_service = CharacterService()
+        level_up_info = character_service.add_experience(character_id, xp_gain)
 
         # 5) Commit et retour
         db.commit()
-        return {'xp': xp_gain, 'gold': gold_gain, 'items': items}
+        return {
+            'xp': xp_gain,
+            'gold': gold_gain,
+            'items': items,
+            'level_up': level_up_info
+        }

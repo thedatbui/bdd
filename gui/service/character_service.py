@@ -73,8 +73,8 @@ class CharacterService:
         # Create the character
         query = """
         INSERT INTO CharacterTable
-        (PlayerID, CharacterName, Class, Strength, Agility, Intelligence, pv, mana) 
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        (PlayerID, CharacterName, Class, Strength, Agility, Intelligence, pv, mana, AttributePoints) 
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         values = (
             player_id,
@@ -84,7 +84,8 @@ class CharacterService:
             character.agility,
             character.intelligence,
             character.pv,
-            character.mana
+            character.mana,
+            5  # Initial attribute points
         )
         
         if not self.db_service.execute_query(query, values):
@@ -315,14 +316,196 @@ class CharacterService:
         # Commit the changes
         return self.db_service.commit()
     
+    def calculate_xp_for_next_level(self, current_level):
+        """
+        Calculate the XP required for the next level.
+        Formula: 100 * (current_level ^ 1.5)
+        """
+        return int(100 * (current_level ** 1.5))
+
+    def add_experience(self, character_id, xp_gained):
+        """
+        Add experience points to a character and handle level up if necessary.
+        
+        Args:
+            character_id (int): The character's ID
+            xp_gained (int): The amount of XP to add
+            
+        Returns:
+            dict: Information about the level up if it occurred
+        """
+        # Get current XP and level
+        self.db_service.execute_query(
+            "SELECT ExperiencePoints, PlayerLevel FROM Player p JOIN CharacterTable c ON p.ID = c.PlayerID WHERE c.ID = %s",
+            (character_id,)
+        )
+        result = self.db_service.fetch_one()
+        if not result:
+            return None
+        
+        current_xp, current_level = result
+        new_xp = current_xp + xp_gained
+        xp_for_next = self.calculate_xp_for_next_level(current_level)
+        
+        level_up_info = None
+        levels_gained = 0
+        
+        # Check for level up
+        while new_xp >= xp_for_next:
+            current_level += 1
+            levels_gained += 1
+            new_xp -= xp_for_next
+            xp_for_next = self.calculate_xp_for_next_level(current_level)
+            
+            # Update inventory slots (base 10 + 2 per level after 1)
+            new_slots = 10 + (2 * (current_level - 1))
+            self.db_service.execute_query(
+                "UPDATE Player SET InventorySlot = %s WHERE ID = (SELECT PlayerID FROM CharacterTable WHERE ID = %s)",
+                (new_slots, character_id)
+            )
+            
+            level_up_info = {
+                'old_level': current_level - levels_gained,
+                'new_level': current_level,
+                'remaining_xp': new_xp,
+                'next_level_xp': xp_for_next
+            }
+        
+        # Add attribute points for all levels gained at once
+        if levels_gained > 0:
+            self.add_attribute_points(character_id, 2 * levels_gained)
+        
+        # Update XP and level
+        self.db_service.execute_query(
+            "UPDATE Player SET ExperiencePoints = %s, PlayerLevel = %s WHERE ID = (SELECT PlayerID FROM CharacterTable WHERE ID = %s)",
+            (new_xp, current_level, character_id)
+        )
+        
+        return level_up_info
+
+    def get_character_level_info(self, character_id):
+        """
+        Get the character's current level and XP information.
+        
+        Args:
+            character_id (int): The character's ID
+            
+        Returns:
+            dict: Information about the character's level and XP
+        """
+        self.db_service.execute_query(
+            "SELECT ExperiencePoints, PlayerLevel FROM Player p JOIN CharacterTable c ON p.ID = c.PlayerID WHERE c.ID = %s",
+            (character_id,)
+        )
+        result = self.db_service.fetch_one()
+        if not result:
+            return None
+            
+        current_xp, current_level = result
+        xp_for_next = self.calculate_xp_for_next_level(current_level)
+        
+        return {
+            'current_level': current_level,
+            'current_xp': current_xp,
+            'xp_for_next_level': xp_for_next,
+            'xp_progress': (current_xp / xp_for_next) * 100
+        }
 
     def get_wallet_for_character(self, character_id):
         """
         Récupère le solde d'or (WalletCredits) du personnage.
         """
         self.db_service.execute_query(
-            "SELECT WalletCredits FROM CharacterTable WHERE ID = %s",
+            "SELECT WalletCredits FROM Player p JOIN CharacterTable c ON p.ID = c.PlayerID WHERE c.ID = %s",
             (character_id,)
         )
         row = self.db_service.fetch_one()
         return (row or (0,))[0]
+
+    def update_wallet(self, character_id, amount):
+        """
+        Met à jour le solde d'or du personnage de manière sécurisée.
+        
+        Args:
+            character_id (int): L'ID du personnage
+            amount (int): Le montant à ajouter (positif) ou retirer (négatif)
+            
+        Returns:
+            bool: True si la transaction a réussi, False sinon
+        """
+        # Vérifier que le montant est valide
+        if amount == 0:
+            return True
+            
+        # Récupérer le solde actuel
+        current_balance = self.get_wallet_for_character(character_id)
+        new_balance = current_balance + amount
+        
+        # Vérifier que le nouveau solde ne sera pas négatif
+        if new_balance < 0:
+            return False
+            
+        # Mettre à jour le solde
+        self.db_service.execute_query(
+            "UPDATE Player p JOIN CharacterTable c ON p.ID = c.PlayerID SET p.WalletCredits = %s WHERE c.ID = %s",
+            (new_balance, character_id)
+        )
+        
+        return self.db_service.commit()
+
+    def get_attribute_points(self, character_id):
+        """
+        Get the number of attribute points available for a character.
+        
+        Args:
+            character_id (int): The character's ID
+            
+        Returns:
+            int: Number of attribute points available
+        """
+        query = "SELECT AttributePoints FROM CharacterTable WHERE ID = %s"
+        self.db_service.execute_query(query, (character_id,))
+        result = self.db_service.fetch_one()
+        return result[0] if result else 0
+
+    def add_attribute_points(self, character_id, points):
+        """
+        Add attribute points to a character.
+        
+        Args:
+            character_id (int): The character's ID
+            points (int): Number of points to add
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        query = "UPDATE CharacterTable SET AttributePoints = AttributePoints + %s WHERE ID = %s"
+        if not self.db_service.execute_query(query, (points, character_id)):
+            return False
+        return self.db_service.commit()
+
+    def use_attribute_point(self, character_id, attribute):
+        """
+        Use an attribute point to increase a character's attribute.
+        
+        Args:
+            character_id (int): The character's ID
+            attribute (str): The attribute to increase ('Strength', 'Agility', or 'Intelligence')
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        # First check if we have points available
+        if self.get_attribute_points(character_id) <= 0:
+            return False
+            
+        # Update the attribute and decrease points
+        query = f"""
+        UPDATE CharacterTable 
+        SET {attribute} = {attribute} + 1,
+            AttributePoints = AttributePoints - 1
+        WHERE ID = %s
+        """
+        if not self.db_service.execute_query(query, (character_id,)):
+            return False
+        return self.db_service.commit()
