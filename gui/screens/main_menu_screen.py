@@ -51,8 +51,10 @@ class MainMenuScreen:
         self.characterLabel = self.testLayout[2]
         self.characterLabel.setText(f"Character: {self.currentUser.getCharacterSelected().getAttribute('name') if self.currentUser.getCharacterSelected() else 'None'}")
 
-        self.questLayout = add_horizontal_labels(self.main_layout, "Quest: ")
-        self.QuestLabel = self.questLayout
+        self.questLayout = add_horizontal_labels(self.main_layout, "Quest: ", "XP: ")
+        self.QuestLabel = self.questLayout[0]
+        self.XPLabel = self.questLayout[1]
+        self.XPLabel.setText(f"XP: {self.currentUser.getXp()}")
 
         if self.character is None:
             self.QuestLabel.setText("Quest: None")
@@ -143,25 +145,23 @@ class MainMenuScreen:
             label = QLabel(f"{attr}: {self.attributes[attr]}")
             layout.addWidget(label)
             layout.addStretch()
-            
-            # Only add +/- buttons for Strength, Agility, and Intelligence if points are available
-            if attr in ["Strength", "Agility", "Intelligence"] and available_points > 0:
-                self.buttonList = add_horizontal_buttons(layout, (30, 30), "-", "+")
-                decreaseBtn = self.buttonList[0]
-                increaseBtn = self.buttonList[1]
+            if attr in ["Strength", "Agility", "Intelligence"]:
+                self.buttonList = add_horizontal_buttons(layout, (30, 30), "+")
+                increaseBtn = self.buttonList
+                increaseBtn.setStyleSheet("background-color: gray;")
+                increaseBtn.setEnabled(False)
+                # Only add +/- buttons for Strength, Agility, and Intelligence if points are available
+                if available_points > 0:
+                    increaseBtn.setStyleSheet("background-color: lightblue;")
+                    increaseBtn.setEnabled(True)
+                    increaseBtn.clicked.connect(lambda checked, a=attr: self.increaseAttribute(a))
                 
-                decreaseBtn.clicked.connect(lambda checked, a=attr: self.decreaseAttribute(a))
-                increaseBtn.clicked.connect(lambda checked, a=attr: self.increaseAttribute(a))
-            else:
-                # For pv and mana, or if no points available, just show the value
-                layout.addStretch()
-        
             # Store references to the label for updating
             self.attributeLayouts[attr] = {
                 "layout": layout,
                 "label": label
             }
-            
+        
             # Add the attribute layout to main layout
             self.main_layout.addLayout(layout)
         
@@ -179,6 +179,9 @@ class MainMenuScreen:
         if available_points <= 0:
             save_button.setEnabled(False)
             save_button.setStyleSheet("background-color: gray;")
+        else:
+            save_button.setEnabled(True)
+            save_button.setStyleSheet("background-color: lightblue;")
 
     def increaseAttribute(self, attr):
         """Increase the attribute value if points are available"""
@@ -188,14 +191,6 @@ class MainMenuScreen:
             self.attributes[attr] += 1
             self.attributeLayouts[attr]["label"].setText(f"{attr}: {self.attributes[attr]}")
             self.attributePointsLabel.setText(f"Attribute Points Available: {current_points - 1}")
-
-    def decreaseAttribute(self, attr):
-        """Decrease the attribute value and return the point"""
-        if self.attributes[attr] > 10:  # Don't go below base value
-            self.attributes[attr] -= 1
-            self.attributeLayouts[attr]["label"].setText(f"{attr}: {self.attributes[attr]}")
-            current_points = int(self.attributePointsLabel.text().split(": ")[1])
-            self.attributePointsLabel.setText(f"Attribute Points Available: {current_points + 1}")
 
     def saveAttributeChanges(self, character):
         """

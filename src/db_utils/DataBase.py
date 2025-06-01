@@ -13,8 +13,8 @@ class DataBase:
         try:
             self.connection = mysql.connector.connect(
                 host='localhost',
-                user='hassan',
-                password='777',
+                user='dat',
+                password='Alckart0246',
                 database='InventaireRPG', 
                 auth_plugin='mysql_native_password',
                 use_pure=True,

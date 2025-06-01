@@ -31,7 +31,7 @@ class ProfileScreen:
         self.main_layout.addWidget(self.label)
 
         self.main_layout.addStretch(1)
-        self.testLayout = add_vertical_labels(self.main_layout, "name: ", "ID: ", "Money: ", "Character: ", "Quest: ", "Beast: ")
+        self.testLayout = add_vertical_labels(self.main_layout, "name: ", "ID: ", "Money: ", "Character: ")
         self.nameLabel = self.testLayout[0]
         self.nameLabel.setText(f"Name: {self.currentUser.getName()}")
         self.idLabel = self.testLayout[1]

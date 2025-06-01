@@ -18,7 +18,7 @@ def loadPlayerData(cursor, playerFile):
         InventorySlots = InventorySlots if checkInteger(InventorySlots) else None
         ID = ID if checkInteger(ID) else None
         
-        # # Check if player already exists
+        # Check if player already exists
         cursor.execute("SELECT COUNT(*) FROM Player WHERE ID = %s OR UserName = %s", 
                     (player['ID'], player['NomUtilisateur']))
         
@@ -453,7 +453,6 @@ def main():
     npcFile = loadJSONfile('data/pnjs.json')
     NPCs = npcFile["PNJs"]
     
-
     # Load XML file
     monsterFile = loadXMLfile('data/monstres.xml')
     monsterFile = loadXMLfile('data/monstres.xml')

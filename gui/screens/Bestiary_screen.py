@@ -5,7 +5,9 @@ from gui.components.labels import *
 from gui.components.butttons import *
 from gui.utils import *
 from gui.service.Bestiary_service import BestiaryService
+from gui.service.npc_service import NpcService
 from gui.service.character_service import CharacterService
+from gui.service.player_service import PlayerService
 
 class BestiaryScreen:
     """Screen for displaying the bestiary."""
@@ -23,6 +25,8 @@ class BestiaryScreen:
         self.main_layout = main_window.mainLayout
         self.bestiary_service = BestiaryService()
         self.character_service = CharacterService()
+        self.npc_service = NpcService()
+        self.player_service = PlayerService()
         
     def setupBestiaryMenu(self):
         """Initialize the user interface."""
@@ -62,11 +66,11 @@ class BestiaryScreen:
             item = QtWidgets.QListWidgetItem(bestiary)
             item.setData(Qt.UserRole, bestiary)
             if self.beast and bestiary == self.beast:
-                item.setText(f"► {bestiary} ◄")  # Add arrow indicators
+                item.setText(f"► {bestiary} ◄")
                 font = item.font()
                 font.setBold(True)
                 item.setFont(font)
-                item.setForeground(QtGui.QColor("blue"))  # Change text color
+                item.setForeground(QtGui.QColor("blue"))
             self.bestiaryList.addItem(item)
         
         self.bestiaryListLayout.addWidget(self.bestiaryList)
@@ -93,12 +97,20 @@ class BestiaryScreen:
                 
             bestiary_name = current.data(Qt.UserRole)
             bestiary = self.bestiary_service.get_bestiary_details(bestiary_name)
+            drops = self.bestiary_service.get_drop_from_monster(bestiary.getId())
+           
             details = f"Name: {bestiary.getName()}\n" \
-                        f"Attributes: {bestiary.getAttributes()}\n" \
-                        f"Attack: {bestiary.getAttack()}\n" \
-                        f"Defense: {bestiary.getDefense()}\n" \
-                        f"Life Points: {bestiary.getLifePoints()}"
-            self.label.setText(details)
+                      f"Attack: {bestiary.getAttack()}\n" \
+                      f"Defense: {bestiary.getDefense()}\n" \
+                      f"Life Points: {bestiary.getLifePoints()}"
+    
+            if len(drops) > 0:
+                drops_text = "Drops:\n"
+                for drop in drops:
+                    drops_text += f"{drop['name']} (Rate: {drop['rate']}%, Quantity: {drop['quantity']})\n"
+                self.label.setText(details + "\n" + "\n" + drops_text)
+            else:
+                self.label.setText(details + "\n" + "\n" + "No drops available for this monster.")
     
 
     def kill_monster(self):
@@ -134,7 +146,11 @@ class BestiaryScreen:
         if result['gold']:
             msg_lines.append(f"Gold gained: {result['gold']}")
         for name, qty in result['items']:
-            msg_lines.append(f"{qty}× {name}")
+            if qty > 0:
+                msg_lines.append(f"{qty}× {name}")
+            else:
+                # inventory is full
+                msg_lines.append(f"{name} (not added, inventory full)")
 
         # Ajouter les informations de niveau si un level up a eu lieu
         if result['level_up']:
@@ -157,7 +173,7 @@ class BestiaryScreen:
 
         # 5) Rafraîchir le label d'or (s'il existe)
         if hasattr(self, 'goldLabel'):
-            new_gold = self.character_service.get_wallet_for_character(self.characterId)
+            new_gold = self.player_service.get_wallet_for_character(self.characterId)
             self.goldLabel.setText(f"Gold: {new_gold}")
 
         # 6) Mise à jour de la progression de quête
@@ -173,6 +189,10 @@ class BestiaryScreen:
             if self.beastKilled == self.count:
                 QMessageBox.information(self.main_window, "Quête terminée",
                                         "Félicitations !")
+                questid = self.npc_service.get_quest_details(self.questSelected).get_id()
+                questGold = self.npc_service.get_gold_quest(questid)
+                print(f"Quest Gold: {questGold}")
+                self.player_service.update_wallet(self.characterId, questGold)
                 self.character_service.remove_quest(self.characterId, self.questSelected)
                 self.character_service.select_next_quest(self.characterId)
                 self.setupBestiaryMenu()

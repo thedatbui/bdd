@@ -36,12 +36,24 @@ class InventoryMenuScreen:
         Set up the inventory menu.
         """
         clear_screen(self.main_layout)
-
+            
         self.currentUser = self.main_window.current_user
         self.character = self.currentUser.getCharacterSelected()
         self.label = create_title_label("Inventory Menu")
         self.main_layout.addWidget(self.label)
         
+        self.label = add_horizontal_labels(self.main_layout, "Current Weight: 0", "Max Weight: 0")
+        self.currentWeightLabel = self.label[0]
+        self.maxWeightLabel = self.label[1]
+        self.currentWeight = self.inventory_service.get_item_quantities(self.character.getAttribute("Id"))
+        self.db.execute_query(
+            "SELECT InventorySlot FROM Player WHERE ID = %s",
+            (self.currentUser.getId(),)
+        )
+        max_slots = self.db.fetch_one()[0]
+        self.currentWeightLabel.setText(f"Current Weight: {self.currentWeight}")
+        self.maxWeightLabel.setText(f"Max Weight: {max_slots}")
+
         self.subLayout = QHBoxLayout()
         self.itemList = QtWidgets.QListWidget()
         result = self.inventory_service.get_inventory_items(self.character.getAttribute("Id"))
@@ -118,7 +130,7 @@ class InventoryMenuScreen:
         current_row = self.itemList.currentRow()
         item_name = self.itemList.item(current_row).text()
         current_count = self.inventory_service.get_item_quantity(self.character.getAttribute("Id"), self.itemList.item(current_row).text())
-        print(current_count)
+        self.currentWeight -= 1
         if current_row >= 0:
             if current_count > 1:
                 print("Deleting item")
@@ -128,4 +140,6 @@ class InventoryMenuScreen:
                 self.inventory_service.delete_item(self.currentUser.getId(), item_name)
                 self.itemList.takeItem(current_row)
                 QMessageBox.information(self.main_window, "Success", f"{item_name} has been deleted from your inventory.")
+        self.currentWeightLabel.setText(f"Current Weight: {self.currentWeight}")
+        self.label.setText("Object Details: ")
         self.db.commit()

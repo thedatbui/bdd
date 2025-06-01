@@ -304,16 +304,10 @@ class CharacterMenuScreen:
             
             # Only add +/- buttons for Strength, Agility, and Intelligence
             if attr in ["Strength", "Agility", "Intelligence"]:
-                self.buttonList = add_horizontal_buttons(layout, (30, 30), "-", "+")
-                decreaseBtn = self.buttonList[0]
-                increaseBtn = self.buttonList[1]
-                
-                decreaseBtn.clicked.connect(lambda checked, a=attr: self.decreaseAttribute(a))
+                self.buttonList = add_horizontal_buttons(layout, (30, 30), "+")
+                increaseBtn = self.buttonList
                 increaseBtn.clicked.connect(lambda checked, a=attr: self.increaseAttribute(a))
-            else:
-                # For pv and mana, just show the value
-                layout.addStretch()
-        
+                
             # Store references to the label for updating
             self.attributeLayouts[attr] = {
                 "layout": layout,
@@ -341,14 +335,6 @@ class CharacterMenuScreen:
             self.attributes[attr] += 1
             self.attributeLayouts[attr]["label"].setText(f"{attr}: {self.attributes[attr]}")
             self.attributePointsLabel.setText(f"Attribute Points Available: {current_points - 1}")
-
-    def decreaseAttribute(self, attr):
-        """Decrease the attribute value and return the point"""
-        if self.attributes[attr] > 10:  # Don't go below base value
-            self.attributes[attr] -= 1
-            self.attributeLayouts[attr]["label"].setText(f"{attr}: {self.attributes[attr]}")
-            current_points = int(self.attributePointsLabel.text().split(": ")[1])
-            self.attributePointsLabel.setText(f"Attribute Points Available: {current_points + 1}")
 
     def createCharacter(self):
         """Handle character creation"""

@@ -23,7 +23,7 @@ class PlayerService:
         result = self.db_service.fetch_one()
         
         if result:
-            player = Player(name=result[1], Id=result[0], money=result[3], level=result[2], inventorySlot=result[5])
+            player = Player(name=result[1], Id=result[0], Xp=result[3], money=result[4], level=result[2], inventorySlot=result[5])
             return player
         return None
     
@@ -143,6 +143,63 @@ class PlayerService:
         
         return result is not None
     
+    def update_player_wallet(self, player_id, amount):
+        """
+        Update the player's wallet.
+        
+        Args:
+            player_id (int): The player's ID
+            amount (int): The amount to add/subtract
             
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        query = "UPDATE Player SET WalletCredits = %s  WHERE ID = %s"
+        if not self.db_service.execute_query(query, (amount, player_id)):
+            return False
+        
+        return self.db_service.commit()
+    
+    def get_wallet_for_character(self, character_id):
+        """
+        Récupère le solde d'or (WalletCredits) du personnage.
+        """
+        self.db_service.execute_query(
+            "SELECT WalletCredits FROM Player p JOIN CharacterTable c ON p.ID = c.PlayerID WHERE c.ID = %s",
+            (character_id,)
+        )
+        row = self.db_service.fetch_one()
+        return (row or (0,))[0]
+
+    def update_wallet(self, character_id, amount):
+        """
+        Met à jour le solde d'or du personnage de manière sécurisée.
+        
+        Args:
+            character_id (int): L'ID du personnage
+            amount (int): Le montant à ajouter (positif) ou retirer (négatif)
+            
+        Returns:
+            bool: True si la transaction a réussi, False sinon
+        """
+        # Vérifier que le montant est valide
+        if amount == 0:
+            return True
+            
+        # Récupérer le solde actuel
+        current_balance = self.get_wallet_for_character(character_id)
+        new_balance = current_balance + amount
+        
+        # Vérifier que le nouveau solde ne sera pas négatif
+        if new_balance < 0:
+            return False
+            
+        # Mettre à jour le solde
+        self.db_service.execute_query(
+            "UPDATE Player p JOIN CharacterTable c ON p.ID = c.PlayerID SET p.WalletCredits = %s WHERE c.ID = %s",
+            (new_balance, character_id)
+        )
+        
+        return self.db_service.commit()
         
        

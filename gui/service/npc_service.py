@@ -109,5 +109,39 @@ class NpcService:
                 item = f"{row[0]} - {row[1]} gold - {row[2]} available"
                 item_list.append(item)
         return item_list
+    
+    def update_npc_inventory(self, npc_id, item_name):
+        """
+        Update the inventory of an NPC.
+        
+        Args:
+            npc_id (int): The ID of the NPC
+            item_name (str): The name of the item
+            quantity (int): The quantity to update
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        query = "UPDATE NPCInventory SET Quantity = Quantity - 1 WHERE NPCID = %s AND ObjectName = %s"
+        if not self.db_service.execute_query(query, (npc_id, item_name)):
+            return False
+        self.db_service.commit()
+        return True
+    
+    def get_gold_quest (self, quest_id):
+        """
+        Get the gold reward for a specific quest.
+        
+        Args:
+            quest_id (int): The ID of the quest
+            
+        Returns:
+            int: The amount of gold rewarded for the quest
+        """
+        query = "SELECT GoldAmount FROM QuestGold WHERE QuestID = %s"
+        if not self.db_service.execute_query(query, (quest_id,)):
+            return 0
+        result = self.db_service.fetch_one()
+        return result[0] if result else 0
             
        

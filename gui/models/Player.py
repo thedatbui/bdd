@@ -5,10 +5,11 @@ from gui.service.character_service import CharacterService
 
 
 class Player():
-    def __init__(self, name, Id, money, level, inventorySlot):
+    def __init__(self, name, Id, Xp, money, level, inventorySlot):
         self.name = name
         self.Id = Id
         self.money = money
+        self.Xp = Xp
         self.level = level
         self.inventorySlot = inventorySlot
         self.characterSeleted = None
@@ -46,12 +47,21 @@ class Player():
     def getCharacterSelected(self):
         return self.characterSeleted
     
+    def getXp(self):
+        return self.Xp
+    
     def getNpc(self):
         return self.npc
     
     def setNpc(self, npc):
         self.npc = npc
     
+    def setXp(self, xp):
+        if xp >= 0:
+            self.Xp = xp
+        else:
+            raise ValueError("XP cannot be negative.")
+        
     def setMoney(self, money):
         if money >= 0:
             self.money = money
@@ -110,14 +120,7 @@ class Player():
         characterList = self.characterService.get_characters_by_player_id(self.Id)
         return characterList
         
-    def addItemToInventory(self, item):
+    def addItemToInventory(self, itemName):
         self.inventory.update_attribute(self.Id, "MaxCapacity", self.inventorySlot)
-        # Check if the item is already in the inventor
-        result, quantity = self.inventory.check_existing_item(self.Id, item.getName())
-        if result and quantity > 0:
-            self.inventory.update_quantity(self.characterSeleted.getAttribute("Id"), item.getName(), quantity + 1)
-            return
-        
-        # If not, insert the item into the inventory
-        self.inventory.add_item(self.Id, self.characterSeleted.getAttribute("Id"), item.getName(), self.inventorySlot)
+        self.inventory.add_item(self.Id, self.characterSeleted.getAttribute("Id"), itemName, self.inventorySlot)
         print("Item added to inventory.")

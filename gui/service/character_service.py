@@ -53,7 +53,7 @@ class CharacterService:
         """
         query = "SELECT * FROM CharacterTable WHERE CharacterName = %s"
         self.db_service.execute_query(query, (character_name,))
-        return self.db_service.fetch_one() is not None
+        return self.db_service.fetch_one() is not None and self.db_service.commit()
     
     def create_character(self, player_id, character):
         """
@@ -73,8 +73,8 @@ class CharacterService:
         # Create the character
         query = """
         INSERT INTO CharacterTable
-        (PlayerID, CharacterName, Class, Strength, Agility, Intelligence, pv, mana, AttributePoints) 
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        (PlayerID, CharacterName, Class, Strength, Agility, Intelligence, pv, mana) 
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
         values = (
             player_id,
@@ -85,7 +85,6 @@ class CharacterService:
             character.intelligence,
             character.pv,
             character.mana,
-            5  # Initial attribute points
         )
         
         if not self.db_service.execute_query(query, values):
@@ -107,23 +106,11 @@ class CharacterService:
         Returns:
             (bool, str): Tuple of (success, message)
         """
-        # delete related items
-        query = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_NAME = 'CharacterTable';"
-        self.db_service.execute_query(query)
-        results = self.db_service.fetch_all()
-        for result in results:
-            table_name = result[0]
-            query = f"DELETE FROM {table_name} WHERE CharacterID = %s"
-            if not self.db_service.execute_query(query, (characterId,)):
-                return False, f"Failed to delete related data from {table_name}."
-            
         query = "DELETE FROM CharacterTable WHERE ID = %s AND PlayerID = %s"
         if not self.db_service.execute_query(query, (characterId, player_id)):
             return False, f"Failed to delete character: {characterId}"
         
-        if not self.db_service.commit():
-            return False, "Failed to commit character deletion."
-        
+        self.db_service.commit()
         return True, f"Character {characterId} deleted successfully."
     
     def insert_character_killQuest(self, characterId, quest, beast, count):
@@ -171,7 +158,10 @@ class CharacterService:
         if not self.db_service.execute_query(query, (quest, characterId)):
             return False
         
-        return self.db_service.commit()
+        if not self.db_service.commit():
+            return False
+        
+        return True
     
     def update_beast_killed(self, characterId, questName, beastKilled):
         """
@@ -188,7 +178,9 @@ class CharacterService:
         if not self.db_service.execute_query(query, (beastKilled, characterId, questName)):
             return False
         
-        return self.db_service.commit()
+        if not self.db_service.commit():
+            return False
+        return True
     
     def get_beast_killed(self, characterID, quest):
         """
@@ -198,10 +190,13 @@ class CharacterService:
             int: The number of beasts killed or None if not found
         """
         query = "SELECT BeastKilled FROM CharacterQuest WHERE CharacterID = %s AND QuestName = %s"
-        self.db_service.execute_query(query, (characterID, quest))
+        if not self.db_service.execute_query(query, (characterID, quest)):
+            return False
         result = self.db_service.fetch_one()
         print(f"get_beast_killed query: {query} with params: {characterID}, {quest}")
         print(f"get_beast_killed: {result}")
+        if not self.db_service.commit():
+            return False
         return result[0] if result else None
     
     def get_count(self, quest):
@@ -215,9 +210,10 @@ class CharacterService:
             int: The count objective or None if not found
         """
         query = "SELECT killNumber FROM CharacterQuest WHERE QuestName = %s"
-        self.db_service.execute_query(query, (quest,))
+        if not self.db_service.execute_query(query, (quest,)):
+            return False
         result = self.db_service.fetch_one()
-        
+        self.db_service.commit()
         return result[0] if result else None
         
     def get_selected_quest(self, characterId):
@@ -231,9 +227,10 @@ class CharacterService:
             str: The selected quest name or None if not found
         """
         query = "SELECT Quest_In_Progress FROM CharacterTable WHERE ID = %s"
-        self.db_service.execute_query(query, (characterId,))
+        if not self.db_service.execute_query(query, (characterId,)):
+            return False
         result = self.db_service.fetch_one()
-        
+        self.db_service.commit()
         return result[0] if result else None
     
     def get_beast_to_kill(self, characterId, quest):
@@ -247,8 +244,10 @@ class CharacterService:
             str: The beast name or None if not found
         """
         query = "SELECT BeastName FROM CharacterQuest WHERE CharacterID = %s AND QuestName = %s"
-        self.db_service.execute_query(query, (characterId, quest))
+        if not self.db_service.execute_query(query, (characterId, quest)):
+            return False
         result = self.db_service.fetch_one()
+        self.db_service.commit()
         return result[0] if result else None
     
     def get_quest_list(self, characterId):
@@ -264,7 +263,7 @@ class CharacterService:
         query = "SELECT QuestName FROM CharacterQuest WHERE CharacterID = %s"
         self.db_service.execute_query(query, (characterId,))
         results = self.db_service.fetch_all()
-        
+        self.db_service.commit()
         return [result[0] for result in results] if results else []
     
     def remove_quest(self, characterId, quest):
@@ -380,78 +379,8 @@ class CharacterService:
             "UPDATE Player SET ExperiencePoints = %s, PlayerLevel = %s WHERE ID = (SELECT PlayerID FROM CharacterTable WHERE ID = %s)",
             (new_xp, current_level, character_id)
         )
-        
+        self.db_service.commit()
         return level_up_info
-
-    def get_character_level_info(self, character_id):
-        """
-        Get the character's current level and XP information.
-        
-        Args:
-            character_id (int): The character's ID
-            
-        Returns:
-            dict: Information about the character's level and XP
-        """
-        self.db_service.execute_query(
-            "SELECT ExperiencePoints, PlayerLevel FROM Player p JOIN CharacterTable c ON p.ID = c.PlayerID WHERE c.ID = %s",
-            (character_id,)
-        )
-        result = self.db_service.fetch_one()
-        if not result:
-            return None
-            
-        current_xp, current_level = result
-        xp_for_next = self.calculate_xp_for_next_level(current_level)
-        
-        return {
-            'current_level': current_level,
-            'current_xp': current_xp,
-            'xp_for_next_level': xp_for_next,
-            'xp_progress': (current_xp / xp_for_next) * 100
-        }
-
-    def get_wallet_for_character(self, character_id):
-        """
-        Récupère le solde d'or (WalletCredits) du personnage.
-        """
-        self.db_service.execute_query(
-            "SELECT WalletCredits FROM Player p JOIN CharacterTable c ON p.ID = c.PlayerID WHERE c.ID = %s",
-            (character_id,)
-        )
-        row = self.db_service.fetch_one()
-        return (row or (0,))[0]
-
-    def update_wallet(self, character_id, amount):
-        """
-        Met à jour le solde d'or du personnage de manière sécurisée.
-        
-        Args:
-            character_id (int): L'ID du personnage
-            amount (int): Le montant à ajouter (positif) ou retirer (négatif)
-            
-        Returns:
-            bool: True si la transaction a réussi, False sinon
-        """
-        # Vérifier que le montant est valide
-        if amount == 0:
-            return True
-            
-        # Récupérer le solde actuel
-        current_balance = self.get_wallet_for_character(character_id)
-        new_balance = current_balance + amount
-        
-        # Vérifier que le nouveau solde ne sera pas négatif
-        if new_balance < 0:
-            return False
-            
-        # Mettre à jour le solde
-        self.db_service.execute_query(
-            "UPDATE Player p JOIN CharacterTable c ON p.ID = c.PlayerID SET p.WalletCredits = %s WHERE c.ID = %s",
-            (new_balance, character_id)
-        )
-        
-        return self.db_service.commit()
 
     def get_attribute_points(self, character_id):
         """
@@ -466,6 +395,7 @@ class CharacterService:
         query = "SELECT AttributePoints FROM CharacterTable WHERE ID = %s"
         self.db_service.execute_query(query, (character_id,))
         result = self.db_service.fetch_one()
+        self.db_service.commit()
         return result[0] if result else 0
 
     def add_attribute_points(self, character_id, points):

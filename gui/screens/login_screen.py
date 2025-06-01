@@ -123,7 +123,7 @@ class LoginScreen:
                 return
             
             # Create a new Player object
-            self.currentUser = Player(userName, None, None, None, None)
+            self.currentUser = Player(userName, None, None, None, None, None)
             # Insert the new player into the database
             self.player_service.insert_player(self.currentUser)
 

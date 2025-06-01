@@ -10,6 +10,7 @@ from gui.service.db_service import *
 from gui.service.npc_service import *
 from gui.service.Bestiary_service import BestiaryService
 from gui.service.character_service import CharacterService
+from gui.service.inventory_service import InventoryService
 from gui.utils import *
 from gui.models.Npc import *
 from gui.models.Object import *
@@ -34,7 +35,8 @@ class NpcScreen:
         self.db = DatabaseService()
         self.bestiary_service = BestiaryService()
         self.character_service = CharacterService()
-    
+        self.inventory_service = InventoryService()
+
     def setupNpcMenu(self):
         """
         Set up the NPC menu.
@@ -86,10 +88,10 @@ class NpcScreen:
         self.label = create_title_label(f"{dialogue}", 12)
         self.main_layout.addWidget(self.label)
 
-        gold = self.character_service.get_wallet_for_character(self.characterId)
-        self.label = create_label(f"Gold: {gold}")
+        gold = self.player_service.get_wallet_for_character(self.characterId)
+        self.goldLabel = create_label(f"Gold: {gold}")
 
-        self.main_layout.addWidget(self.label)
+        self.main_layout.addWidget(self.goldLabel)
 
         self.subLayout = QHBoxLayout()
         self.subItemLayout = QVBoxLayout()
@@ -99,9 +101,6 @@ class NpcScreen:
         ItemResult = self.npc_service.get_item_details(Id)
         for items in ItemResult:
             self.itemList.addItem(items)
-        # for row in ItemResult:
-        #     item = QtWidgets.QListWidgetItem(f"{row[0]} - {row[1]} gold - {row[2]} available")
-        #     self.itemList.addItem(item)
                 
         self.itemList.doubleClicked.connect(self.on_itemSelected)
         self.subItemLayout.addWidget(self.label)
@@ -139,61 +138,76 @@ class NpcScreen:
         current_row = self.itemList.currentRow()
         if current_row >= 0:
             item = self.itemList.item(current_row).text()
-            item_name, item_price, item_quantity = item.split(" - ")
-            item_price = int(item_price.split(" ")[0])
-            item_quantity = int(item_quantity.split(" ")[0])
+            item_name, item_price_text, item_quantity_text = item.split(" - ")
+            item_price = int(item_price_text.split(" ")[0])
+            item_quantity = int(item_quantity_text.split(" ")[0])
             
-            # check if the current player has enough space in the inventory
-            query = "SELECT COUNT(*) FROM Inventory WHERE characterID = %s"
-            self.db.execute_query(query, (self.character.getAttribute("Id"),))
-            inventory_count = self.db.fetch_one()[0]
-
-            if inventory_count < self.currentUser.getInventorySlot():
-                if item_quantity > 0 :
-                    query = "SELECT * FROM ObjectTest WHERE ObjectName = %s"
-                    self.db.execute_query(query, (item_name,))
-                    result = self.db.fetch_one()
-                    self.object = Object(result[1], result[2], result[3], result[4], result[5], result[6])
-                    self.currentUser.addItemToInventory(self.object)
-
-                    query = "UPDATE NPCInventory SET Quantity = Quantity - 1 WHERE ObjectName = %s AND NPCID = %s"
-                    self.db.execute_query(query, (item_name, self.npc.getId()))
-                    self.db.commit()
-                    item_quantity -= 1
-                    self.itemList.item(current_row).setText(f"{item_name} - {item_price} gold - {item_quantity} available")
-
-                    # update Inventory
-
-                else:
-                    QMessageBox.warning(
-                        self.main_window,
-                        "Out of Stock",
-                        f"'{item_name}' is out of stock."
-                    )
-            else:
+            # Check if item is in stock
+            if item_quantity <= 0:
+                QMessageBox.warning(
+                    self.main_window,
+                    "Out of Stock",
+                    f"'{item_name}' is out of stock."
+                )
+                return
+                
+            # Check if the player has enough money
+            if self.currentUser.getMoney() < item_price:
+                QMessageBox.warning(
+                    self.main_window,
+                    "Insufficient Funds",
+                    f"You do not have enough money to purchase '{item_name}'."
+                )
+                return
+                
+            # Check if the player's inventory is full
+            inventory_count = self.inventory_service.get_item_quantities(self.character.getAttribute("Id"))
+            print(f"Current inventory count: {inventory_count}")
+            if inventory_count >= self.currentUser.getInventorySlot():
                 QMessageBox.warning(
                     self.main_window,
                     "Inventory Full",
                     f"Your inventory is full. Please remove an item before purchasing."
                 )
-
-            # if self.currentUser.getMoney() >= item_price:
-            #     # Update NPC inventory
-            #     query = "UPDATE NPCInventory SET Quantity = Quantity - 1 WHERE ObjectName = %s AND NPCID = %s"
-            #     self.cursor.execute(query, (item_name, self.npc.getId()))
-            #     self.connection.commit()
+                return
+            try:
+                # 1. Update NPC inventory (reduce quantity)
+                self.npc_service.update_npc_inventory(
+                    self.npc.getId(),
+                    item_name
+                )
                 
-            #     QMessageBox.information(
-            #         self.main_window,
-            #         "Success",
-            #         f"You have purchased '{item_name}' for {item_price} gold."
-            #     )
-            # else:
-            #     QMessageBox.warning(
-            #         self.main_window,
-            #         "Insufficient Funds",
-            #         f"You do not have enough money to purchase '{item_name}'."
-            #     )
+                # 2. Update player wallet
+                new_balance = self.currentUser.getMoney() - item_price
+                self.player_service.update_player_wallet(
+                    self.currentUser.getId(),
+                    new_balance
+                )
+                    
+                # 3. Create the object and add to player inventory
+                self.currentUser.addItemToInventory(item_name)
+                
+                # Transaction successful, update UI and notify user
+                self.currentUser.setMoney(new_balance)
+                self.goldLabel.setText(f"Gold: {new_balance}")
+                
+                # Update the list item to show the new quantity
+                self.itemList.item(current_row).setText(f"{item_name} - {item_price} gold - {item_quantity - 1} available")
+                
+                QMessageBox.information(
+                    self.main_window,
+                    "Success",
+                    f"You have purchased '{item_name}' for {item_price} gold."
+                )
+                self.db.commit()
+            except Exception as e:
+                # Handle any errors that occurred during the transaction
+                print(f"Error during purchase: {e}")
+                QMessageBox.critical(
+                    self.main_window,
+                    "Transaction Error",
+                    f"An error occurred during the purchase: {str(e)}"
+                )
 
     def on_quest_selected(self, item):
         """
@@ -208,22 +222,24 @@ class NpcScreen:
             except:
                 pass
             
-            query = "SELECT * FROM Quest WHERE QuestName = %s"
-            if self.db.execute_query(query, (quest_name,)):
-                result = self.db.fetch_one()
-                print(result)
-                
-                if result:
-                    quest_obj = Quest(result[0], result[1], result[2], result[3], result[4])
-                    self.label.setText(
-                        f"Quest Name: {quest_obj.get_name()}\n"
-                        f"Description: {quest_obj.get_description()}\n"
-                        f"Difficulty: {quest_obj.get_difficulty()}\n"
-                        f"Reward: {quest_obj.get_reward()} gold"
-                    )
-                    self.quest_details = quest_obj
-                else:
-                    self.label.setText(f"No details found for quest: {quest_name}")
+            self.quest_obj = self.npc_service.get_quest_details(quest_name)
+            if not self.quest_obj:
+                QMessageBox.warning(
+                    self.main_window,
+                    "Quest Error",
+                    f"Quest '{quest_name}' not found."
+                )
+                return
+            questGold = self.npc_service.get_gold_quest(self.quest_obj.get_id())
+            self.label.setText(
+                f"Quest Name: {self.quest_obj.get_name()}\n"
+                f"Description: {self.quest_obj.get_description()}\n"
+                f"Difficulty: {self.quest_obj.get_difficulty()}\n"
+                f"Xp rewards: {self.quest_obj.get_reward()} Xp \n"
+                f"Gold rewards: {questGold} Gold\n"
+                )
+         
+            self.db.commit()
 
     def confirm_quest_selection(self):
         """
@@ -240,10 +256,10 @@ class NpcScreen:
                 f"You have accepted the quest: {quest_name}."
             )
             for key in possible_kill_keys:
-                if key in self.quest_details.get_description().lower():
+                if key in self.quest_obj.get_description().lower():
                     for bestiary in self.bestiary_service.get_bestiaryName():
-                        if bestiary.lower() in self.quest_details.get_description().lower():
-                            match = re.search(r'\b\d+\b', self.quest_details.get_description())
+                        if bestiary.lower() in self.quest_obj.get_description().lower():
+                            match = re.search(r'\b\d+\b', self.quest_obj.get_description())
                             if match:
                                 if not self.character_service.insert_character_killQuest(
                                     self.character.getAttribute("Id"),
@@ -261,8 +277,7 @@ class NpcScreen:
                                     self.character.getAttribute("Id"),
                                     quest_name
                                 )
-                            self.scene_manager.switch_to_menu("Main Menu")
-                            return
+                          
             
             
 

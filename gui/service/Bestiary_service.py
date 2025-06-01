@@ -1,13 +1,16 @@
 import random
 from gui.models.Bestiary import Bestiary
 from gui.service.db_service import DatabaseService
-
+from gui.service.inventory_service import InventoryService
+from gui.service.player_service import PlayerService
 class BestiaryService:
     """Service for managing the bestiary."""
 
     def __init__(self):
         """Initialize the bestiary service."""
         self.db_service = DatabaseService()
+        self.inventory_service = InventoryService()
+        self.player_service = PlayerService()
 
     def get_bestiaryName(self):
         """Retrieve a bestiary entry by its ID."""
@@ -34,7 +37,15 @@ class BestiaryService:
             return Bestiary(result[0], result[1], result[2], result[3], result[4], result[5])
         return None
 
-
+    def get_drop_from_monster(self, monster_id):
+        """Retrieve the drop items for a specific monster."""
+        query = "SELECT ObjectName, DropRate, Quantity FROM Rewards WHERE MonsterID = %s"
+        if not self.db_service.execute_query(query, (monster_id,)):
+            return []
+        
+        drops = self.db_service.fetch_all()
+        return [{'name': name, 'rate': rate, 'quantity': qty} for name, rate, qty in drops]
+    
     def reward_character_for_monster(self, character_id, monster_id):
         """
         Tue monster_id pour character_id :
@@ -75,12 +86,8 @@ class BestiaryService:
             cum += rate
             if pick <= cum and name.lower() != 'gold':
                 # Vérifier la capacité de l'inventaire
-                db.execute_query(
-                    "SELECT COUNT(*) FROM Inventory WHERE CharacterID = %s",
-                    (character_id,)
-                )
-                inventory_count = db.fetch_one()[0]
-                
+
+                inventory_count = self.inventory_service.get_item_quantities(character_id)
                 db.execute_query(
                     "SELECT InventorySlot FROM Player WHERE ID = %s",
                     (player_id,)
@@ -97,7 +104,9 @@ class BestiaryService:
                         (player_id, character_id, name, qty, qty)
                     )
                     items.append((name, qty))
-                break
+                else:
+                    # Si l'inventaire est plein, on ne peut pas ajouter l'objet
+                    items.append((name, 0))
 
         # 3) Tirage or depuis MonsterGold
         db.execute_query(
@@ -113,7 +122,7 @@ class BestiaryService:
                 # Mise à jour du wallet du joueur de manière sécurisée
                 from gui.service.character_service import CharacterService
                 character_service = CharacterService()
-                if not character_service.update_wallet(character_id, gold_gain):
+                if not self.player_service.update_wallet(character_id, gold_gain):
                     gold_gain = 0  # Si la transaction échoue, on ne donne pas d'or
 
         # 4) Mise à jour de l'XP et gestion du niveau

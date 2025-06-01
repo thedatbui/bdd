@@ -18,13 +18,13 @@ CREATE TABLE CharacterTable (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     PlayerID INT,
     CharacterName VARCHAR(50),
-    Class ENUM("Assassin", "Archer", "Barbare", "Berserker", "Chasseur","Chevalier", "Démoniste", "Druide", "Enchanteresse", "Guerrier","Illusionniste", "Mage", "Moine", "Nécromancien", "Paladin","Prêtresse", "Rôdeur", "Sorcière", "Templier", "Voleur"),
+    Class ENUM("Assassin", "Archer", "Barbare", "Berserker", "Chasseur", "Chevalier", "Démoniste", "Druide", "Enchanteresse", "Guerrier","Illusionniste", "Mage", "Moine", "Nécromancien", "Paladin","Prêtresse", "Rôdeur", "Sorcière", "Templier", "Voleur"),
     Strength INT,
     Agility INT,
     Intelligence INT,
     pv INT,
     mana INT,
-    AttributePoints INT DEFAULT 5,
+    AttributePoints INT DEFAULT 0,
     Quest_In_Progress VARCHAR(100) DEFAULT NULL,
     FOREIGN KEY (PlayerID) REFERENCES Player(ID) ON DELETE CASCADE
 );

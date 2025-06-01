@@ -22,7 +22,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.central_widget)
         self.central_widget.setLayout(self.mainLayout)
 
-        self.current_user = Player(None, None, None, None, None)
+        self.current_user = Player(None, None, None, None, None, None)
         setMenuState("IntroMenu")
         self.sceneManager = SceneManager(self)
         self.sceneManager.set_scene()
